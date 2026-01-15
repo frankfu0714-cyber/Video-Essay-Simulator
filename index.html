@@ -365,49 +365,9 @@
     overflow: hidden;
   }
 }
-/* ===== Mobile: keep question centered and not overlapping UI ===== */
+/* ===== Mobile FINAL: question never overlaps CAM/MIC + fits one screen ===== */
 @media (max-width: 600px) {
 
-  
-  /* ===== Mobile: question always below CAM / MIC bar ===== */
-@media (max-width: 600px) {
-  .questionBox {
-    top: calc(64px + 12px) !important;
-    /* 64px ≈ topbar 高度，12px = 安全間距 */
-
-    left: 10px !important;
-    right: 10px !important;
-  }
-
-  .questionInner {
-    text-align: center !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-  }
-}
-
-
-  /* 題目本體：置中、可換行、不會超出 */
-  .questionInner {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 10px 12px !important;
-    font-size: 16px !important;        /* 手機字稍微小一點 */
-    line-height: 1.35 !important;
-    text-align: center !important;
-
-    /* ✅ 關鍵：英文長句要能斷行 */
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-  }
-
-  /* 讓底部 controls 留出空間，避免題目撞到 Prep/Record */
-  .controls {
-    bottom: 12px !important;
-  }
-}
-/* ===== Record screen: mobile layout (everything fits in one viewport) ===== */
-@media (max-width: 600px) {
   /* 上方條更緊湊 */
   .topbar {
     top: 10px !important;
@@ -458,20 +418,24 @@
     height: 8px !important;
   }
 
-  /* 題目區往上，但不蓋到 topbar；字略縮、可斷行 */
+  /* ✅ 關鍵：題目永遠在 topbar 下方，不重疊 CAM/MIC/Back */
   .questionBox {
-    top: 86px !important;     /* 你若覺得太擠，可改 92~105 */
+    top: 118px !important;   /* 如果還重疊：改大一點 130；太低：改小一點 110 */
     left: 10px !important;
     right: 10px !important;
+    z-index: 6 !important;
   }
 
   .questionInner {
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 10px 12px !important;
     font-size: 16px !important;
     line-height: 1.35 !important;
+    text-align: center !important;
+
     overflow-wrap: anywhere !important;
     word-break: break-word !important;
-    text-align: center !important;
   }
 
   /* 下方控制列縮小，確保同畫面看得到 */
@@ -1496,6 +1460,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
