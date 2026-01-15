@@ -439,12 +439,16 @@
   }
 
   /* 下方控制列縮小，確保同畫面看得到 */
+  /* ===== Mobile: move Prep/Record panel upward ===== */
+@media (max-width: 600px) {
   .controls {
     left: 10px !important;
     right: 10px !important;
-    bottom: 32px !important;
+    bottom: 32px !important;   /* ✅ 往上移（原本 10px） */
     gap: 8px !important;
   }
+}
+
 
   .controls .panel {
     padding: 8px 10px !important;
@@ -1460,6 +1464,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
