@@ -72,7 +72,8 @@
       height: 100%;
       object-fit: cover;
       filter: contrast(1.05) saturate(1.05);
-      transform: scale(1.02);
+      /* ✅ 鏡像（左右相反） */
+  transform: scaleX(-1) scale(1.02);
     }
 
     /* Dark overlay for readability */
@@ -333,7 +334,13 @@
   margin-top: 8px;
   font-size: 0.9rem;           /* 字也縮一點 */
 }
+    
+/* ===== Mirror playback video (左右相反) ===== */
+#playbackVideo {
+  transform: scaleX(-1);
+}
 
+    
   </style>
 </head>
 
@@ -1306,4 +1313,5 @@ showHome();
 </script>
 </body>
 </html>
+
 
