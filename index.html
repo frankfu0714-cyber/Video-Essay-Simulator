@@ -339,6 +339,16 @@
 #playbackVideo {
   transform: scaleX(-1);
 }
+/* ===== Mobile text overflow fix ===== */
+@media (max-width: 480px) {
+  .creator-text,
+  .playbackCard,
+  .panel,
+  .questionInner {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+}
 
     
   </style>
@@ -1313,5 +1323,6 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
