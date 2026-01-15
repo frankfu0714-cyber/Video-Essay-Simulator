@@ -350,6 +350,26 @@
   }
 }
 
+    /* ===== Fix comment form overflow on mobile ===== */
+@media (max-width: 600px) {
+  /* 你留言表單用 .grid 兩欄排版，手機改成單欄 */
+  #homeScreen .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 讓輸入框不會撐出容器 */
+  #commentName,
+  #commentText {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 防止卡片內容被撐爆（保險） */
+  #homeScreen .card {
+    overflow: hidden;
+  }
+}
+
     
   </style>
 </head>
@@ -1323,6 +1343,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
