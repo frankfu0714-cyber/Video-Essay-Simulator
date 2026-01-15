@@ -1,0 +1,1302 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Video Essay Simulator</title>
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family: "Microsoft JhengHei", system-ui, sans-serif; background:#9B59B6; color:#111; }
+
+    /* ===== Shared ===== */
+    .btn {
+      border: none; border-radius: 10px;
+      padding: 12px 14px; font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-primary { background:#2d1b69; color:#fff; }
+    .btn-ghost { background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.25); }
+    .btn-danger { background:#b91c1c; color:#fff; }
+    .pill { padding:8px 10px; border-radius:999px; background:rgba(0,0,0,0.35); color:#fff; font-weight:700; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .muted { opacity:0.85; }
+
+    /* ===== Home Screen ===== */
+    #homeScreen {
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+    }
+    .title { text-align:center; color:#fff; }
+    .title h1 { font-size: 2.2rem; }
+    .card {
+      width: min(960px, 100%);
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    }
+    .grid {
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 720px){ .grid { grid-template-columns: 1fr; } }
+
+    label { display:flex; flex-direction:column; gap:6px; font-weight:700; }
+    input, select, textarea {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+    }
+    textarea { min-height: 84px; resize: vertical; }
+
+    /* ===== Record Screen ===== */
+    #recordScreen {
+      display:none;
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+      background:#000;
+    }
+
+    /* Camera background video */
+    #cameraBg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: contrast(1.05) saturate(1.05);
+      transform: scale(1.02);
+    }
+
+    /* Dark overlay for readability */
+    .shade {
+      position:absolute; inset:0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.55),
+        rgba(0,0,0,0.35),
+        rgba(0,0,0,0.6)
+      );
+      pointer-events:none;
+    }
+
+    /* Top bar */
+    .topbar {
+      position:absolute; top:14px; left:14px; right:14px;
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      z-index: 5;
+    }
+
+    /* Bottom controls */
+    .controls {
+      position:absolute; left:14px; right:14px; bottom:14px;
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px; flex-wrap:wrap;
+      z-index: 5;
+    }
+
+    .panel {
+      background: rgba(0,0,0,0.40);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 12px;
+      color:#fff;
+      backdrop-filter: blur(8px);
+    }
+
+    /* Big countdown */
+    #countdownOverlay {
+      position:absolute; inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 6;
+    }
+    #countdownNumber {
+      font-size: min(18vw, 140px);
+      color:#fff;
+      font-weight: 900;
+      text-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      letter-spacing: 2px;
+    }
+
+    /* Question overlay */
+    .questionBox {
+      position:absolute;
+      left: 14px;
+      right: 14px;
+      top: 76px;
+      z-index: 5;
+      display:flex;
+      justify-content:center;
+    }
+    .questionInner {
+      width: min(960px, 100%);
+      text-align: center;
+      font-size: clamp(18px, 2.2vw, 26px);
+      font-weight: 800;
+      color:#fff;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Playback modal-like screen */
+    #playbackScreen {
+      display:none;
+      position:absolute;
+      inset:0;
+      z-index: 10;
+      background: rgba(0,0,0,0.75);
+      padding: 18px;
+    }
+    .playbackCard {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      background: rgba(0,0,0,0.50);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 16px;
+      padding: 14px;
+      color:#fff;
+      backdrop-filter: blur(10px);
+    }
+    #playbackVideo {
+      width: 100%;
+      max-height: 65vh;
+      border-radius: 14px;
+      background:#000;
+    }
+    /* ===== REC pulsing + progress ===== */
+#recBadge {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.recDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #ff2d2d;
+  box-shadow: 0 0 0 rgba(255,45,45,0.6);
+  animation: recPulse 1.1s infinite;
+}
+
+@keyframes recPulse {
+  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,45,45,0.65); opacity: 1; }
+  70%  { transform: scale(1.18); box-shadow: 0 0 0 12px rgba(255,45,45,0); opacity: 0.95; }
+  100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,45,45,0); opacity: 1; }
+}
+
+.recText {
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* progress bar */
+.progressWrap {
+  width: min(420px, 60vw);
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.18);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.progressFill {
+  height: 100%;
+  width: 0%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 999px;
+  transition: width 0.2s linear;
+}
+
+/* "recording vibe" on camera bg */
+#recordScreen.recording #cameraBg {
+  filter: contrast(1.15) saturate(1.18);
+}
+
+/* subtle vignette while recording */
+#recordScreen.recording .shade {
+  background: radial-gradient(circle at center,
+    rgba(0,0,0,0.35),
+    rgba(0,0,0,0.55)
+  );
+}
+.commentItem{
+  border:1px solid #eee;
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+}
+.commentMeta{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-weight:900;
+}
+.commentTime{
+  font-weight:700;
+  opacity:0.65;
+  font-size:0.9rem;
+}
+.commentBody{
+  margin-top:6px;
+  line-height:1.6;
+  white-space:pre-wrap;
+}
+
+/* ===== Personal Links ===== */
+.personal-links {
+  text-align: center;
+}
+
+.link-icons {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+}
+
+.link-icons a {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f3f3f3;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.link-icons a:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+}
+
+.link-icons img {
+  width: 22px;
+  height: 22px;
+  filter: invert(0.15);
+}
+/* ===== Personal Links (Centered & Compact) ===== */
+.personal-links-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.personal-links {
+  width: fit-content;          /* ✅ 關鍵：不要撐滿 */
+  padding: 14px 22px;
+  text-align: center;
+}
+
+.link-icons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;                   /* 稍微縮短 */
+}
+
+.link-icons a {
+  width: 38px;                 /* 縮小一點 */
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #f3f3f3;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.link-icons a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0,0,0,0.18);
+}
+
+.link-icons img {
+  width: 20px;
+  height: 20px;
+  filter: invert(0.15);
+}
+
+.creator-text {
+  margin-top: 8px;
+  font-size: 0.9rem;           /* 字也縮一點 */
+}
+
+  </style>
+</head>
+
+<body>
+
+<!-- =======================
+     HOME / SETTINGS SCREEN
+     ======================= -->
+     <!-- ===== Personal Links ===== -->
+<div class="personal-links-wrap">
+  <div class="card personal-links">
+    <div class="link-icons">
+      <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
+      </a>
+
+      <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+      </a>
+
+      <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
+      </a>
+    </div>
+
+    <div class="muted creator-text">
+      Connect with GoldOtaku
+    </div>
+  </div>
+</div>
+
+<section id="homeScreen">
+  <div class="title">
+    <h1>Video Essay Simulator</h1>
+    <div class="muted">Start → Countdown → Record → Playback</div>
+  </div>
+
+  <div class="card">
+    <div class="grid">
+      <label>
+        Prep time (seconds)
+        <input type="number" id="prepTime" value="10" min="0"/>
+      </label>
+
+      <label>
+        Record time (seconds)
+        <input type="number" id="recordTime" value="30" min="1"/>
+      </label>
+
+      <label>
+        Camera
+        <select id="cameraSelect">
+          <option value="">(loading devices...)</option>
+        </select>
+      </label>
+
+      <label>
+        Microphone
+        <select id="micSelect">
+          <option value="">(loading devices...)</option>
+        </select>
+      </label>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <label>
+      Question bank (one per line)
+      <textarea id="questionBank">Tell us about a time you failed and what you learned.
+Why MBA, and why now?
+Describe a time you led a team through uncertainty.
+What is your short-term goal, and why this school?
+Tell us about a time you received tough feedback.</textarea>
+    </label>
+
+    <div style="height:14px"></div>
+
+    <div class="row" style="justify-content:space-between;">
+  <div class="muted" id="homeHint">Tip: allow camera/mic permission when prompted.</div>
+
+  <div class="row">
+    <button class="btn btn-ghost" id="resetSessionBtn" style="display:none;">Reset Session</button>
+    <button class="btn btn-primary" id="goStart">Start</button>
+  </div>
+</div>
+
+  </div>
+  <div class="card" style="margin-top:16px;">
+  <h2 style="margin-bottom:10px;">Comments</h2>
+
+  <div class="grid" style="grid-template-columns: 1fr 1fr; align-items:end;">
+    <label>
+      Name
+      <input id="commentName" maxlength="30" placeholder="e.g., Frank"/>
+    </label>
+
+    <label>
+      Your feedback
+      <input id="commentText" maxlength="300" placeholder="What you liked / what to improve..."/>
+    </label>
+  </div>
+
+  <div style="height:12px"></div>
+
+  <div class="row" style="justify-content:space-between;">
+    <div class="muted" id="commentStatus">Be kind and constructive 🙂</div>
+    <button class="btn btn-primary" id="submitComment">Post</button>
+  </div>
+
+  <div style="height:14px"></div>
+  <div id="commentList"></div>
+</div>
+
+</section>
+
+
+<!-- =======================
+     RECORDING SCREEN
+     ======================= -->
+<section id="recordScreen">
+  <video id="cameraBg" autoplay playsinline muted></video>
+  <div class="shade"></div>
+
+  <div class="topbar">
+    <div class="row">
+  <span class="pill" id="statePill">IDLE</span>
+  <span class="pill" id="timerPill">00</span>
+
+  <!-- ✅ REC pulsing badge -->
+  <span class="pill" id="recBadge">
+    <span class="recDot"></span>
+    <span class="recText">REC</span>
+  </span>
+
+  <!-- ✅ progress bar (recording) -->
+  <div class="progressWrap" id="recordProgressWrap" style="display:none;">
+    <div class="progressFill" id="recordProgressFill"></div>
+  </div>
+</div>
+
+
+    <div class="row panel">
+      <label style="font-weight:800; color:#fff;">
+        Cam
+        <select id="camToggle">
+          <option value="on" selected>On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+
+      <label style="font-weight:800; color:#fff;">
+        Mic
+        <select id="micToggle">
+          <option value="on" selected>On</option>
+          <option value="off">Off</option>
+        </select>
+      </label>
+
+      <button class="btn btn-ghost" id="backHome">Back</button>
+    </div>
+  </div>
+
+  <div class="questionBox">
+    <div class="questionInner" id="questionText">Question will appear here.</div>
+  </div>
+
+  <div id="countdownOverlay">
+    <div id="countdownNumber">3</div>
+  </div>
+
+  <div class="controls">
+    <div class="panel row">
+      <div><b>Prep</b>: <span id="prepDisplay">10</span>s</div>
+      <div><b>Record</b>: <span id="recordDisplay">30</span>s</div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-danger" id="stopBtn" style="display:none;">Stop</button>
+    </div>
+  </div>
+
+  <!-- Playback overlay -->
+  <div id="playbackScreen">
+    <div class="playbackCard">
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <div style="font-weight:900; font-size:1.1rem;">Playback</div>
+        <div class="row">
+          <button class="btn btn-ghost" id="retakeBtn">Retake</button>
+          <button class="btn btn-primary" id="nextBtn">Next Question</button>
+          <button class="btn btn-ghost" id="homeBtn">Home</button>
+          <button class="btn btn-ghost" id="downloadBtn">DOWNLOAD</button>
+          <button class="btn btn-ghost" id="closePlayback">Close</button>
+        </div>
+      </div>
+
+      <video id="playbackVideo" controls playsinline></video>
+      <div class="muted" style="margin-top:10px;">
+        If playback is blank on some browsers, try Chrome/Edge on desktop.
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="module">
+  // Firebase SDK (modular)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, limit
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+  // ✅ 1) 你要把這裡換成你自己的 Firebase config（從 Firebase Console 複製）
+  const firebaseConfig = {
+  apiKey: "AIzaSyAoCsZKLfwPVlQ-4rNukikuAgzR3_oLfmg",
+  authDomain: "video-essay-simulator.firebaseapp.com",
+  projectId: "video-essay-simulator",
+  storageBucket: "video-essay-simulator.firebasestorage.app",
+  messagingSenderId: "455293481653",
+  appId: "1:455293481653:web:32d2e02c23cf9a68a1c4fc",
+  measurementId: "G-N6X8VQ3Z6F"
+    
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // DOM
+  const commentName = document.getElementById("commentName");
+  const commentText = document.getElementById("commentText");
+  const submitComment = document.getElementById("submitComment");
+  const commentList = document.getElementById("commentList");
+  const commentStatus = document.getElementById("commentStatus");
+
+  // 讀取留言（最新 50 則）
+  const commentsRef = collection(db, "comments");
+  const q = query(commentsRef, orderBy("createdAt", "desc"), limit(50));
+
+  onSnapshot(q, (snap) => {
+    commentList.innerHTML = "";
+    snap.forEach(doc => {
+      const d = doc.data();
+      const name = (d.name || "Anonymous").replaceAll("<", "&lt;");
+      const text = (d.text || "").replaceAll("<", "&lt;");
+      const ts = d.createdAt?.toDate ? d.createdAt.toDate() : null;
+      const timeStr = ts ? ts.toLocaleString() : "";
+
+      const el = document.createElement("div");
+      el.className = "commentItem";
+      el.innerHTML = `
+        <div class="commentMeta">
+          <div>${name}</div>
+          <div class="commentTime">${timeStr}</div>
+        </div>
+        <div class="commentBody">${text}</div>
+      `;
+      commentList.appendChild(el);
+    });
+  });
+
+  // 發佈留言
+  submitComment.addEventListener("click", async () => {
+    const name = (commentName.value || "").trim().slice(0, 30);
+    const text = (commentText.value || "").trim().slice(0, 300);
+
+    if (!text) {
+      commentStatus.textContent = "Please write something 🙂";
+      return;
+    }
+
+    submitComment.disabled = true;
+    submitComment.style.opacity = "0.6";
+    commentStatus.textContent = "Posting...";
+
+    try {
+      await addDoc(commentsRef, {
+        name: name || "Anonymous",
+        text,
+        createdAt: serverTimestamp()
+      });
+
+      commentText.value = "";
+      commentStatus.textContent = "Posted ✅";
+      setTimeout(() => (commentStatus.textContent = "Be kind and constructive 🙂"), 1200);
+    } catch (e) {
+      commentStatus.textContent = "Failed to post. Please try again.";
+      console.error(e);
+    } finally {
+      submitComment.disabled = false;
+      submitComment.style.opacity = "1";
+    }
+  });
+</script>
+
+
+<script>
+/* =========================================
+   Video Essay Simulator (Camera Background + Record + Playback)
+   ========================================= */
+
+const State = { HOME:"HOME", PREP:"PREP", COUNTDOWN:"COUNTDOWN", RECORD:"RECORD", END:"END" };
+let state = State.HOME;
+
+let mediaStream = null;
+let recorder = null;
+let recordedChunks = [];
+let recordTimer = null;
+let recordStartTs = 0;
+let progressRafId = null;
+let prepTimer = null;
+let hasEverGrantedMedia = false;
+let lastRecordedBlob = null;
+
+
+
+let prepLeft = 0;
+let recordLeft = 0;
+
+let questions = [];
+let qIndex = 0;
+let sessionCompleted = false;
+
+
+let lastQuestionBankText = "";
+
+// DOM
+const downloadBtn = document.getElementById("downloadBtn");
+
+const resetSessionBtn = document.getElementById("resetSessionBtn");
+const homeHint = document.getElementById("homeHint");
+
+const homeBtn = document.getElementById("homeBtn");
+
+const recBadge = document.getElementById("recBadge");
+const recordProgressWrap = document.getElementById("recordProgressWrap");
+const recordProgressFill = document.getElementById("recordProgressFill");
+
+const homeScreen = document.getElementById("homeScreen");
+const recordScreen = document.getElementById("recordScreen");
+
+const prepTimeInput = document.getElementById("prepTime");
+const recordTimeInput = document.getElementById("recordTime");
+const questionBank = document.getElementById("questionBank");
+
+const cameraSelect = document.getElementById("cameraSelect");
+const micSelect = document.getElementById("micSelect");
+
+const goStart = document.getElementById("goStart");
+const backHome = document.getElementById("backHome");
+
+const cameraBg = document.getElementById("cameraBg");
+const questionText = document.getElementById("questionText");
+
+const statePill = document.getElementById("statePill");
+const timerPill = document.getElementById("timerPill");
+
+const prepDisplay = document.getElementById("prepDisplay");
+const recordDisplay = document.getElementById("recordDisplay");
+
+const camToggle = document.getElementById("camToggle");
+const micToggle = document.getElementById("micToggle");
+
+const countdownOverlay = document.getElementById("countdownOverlay");
+const countdownNumber = document.getElementById("countdownNumber");
+
+const stopBtn = document.getElementById("stopBtn");
+
+const playbackScreen = document.getElementById("playbackScreen");
+const playbackVideo = document.getElementById("playbackVideo");
+const closePlayback = document.getElementById("closePlayback");
+const retakeBtn = document.getElementById("retakeBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+/* ---------- Utilities ---------- */
+function lockStartUI() {
+  goStart.disabled = true;
+  goStart.style.opacity = "0.55";
+  goStart.style.cursor = "not-allowed";
+
+  homeHint.textContent = "✅ Resetting… please wait a few seconds.";
+  resetSessionBtn.style.display = "inline-block";
+}
+
+function unlockStartUI() {
+  goStart.disabled = false;
+  goStart.style.opacity = "1";
+  goStart.style.cursor = "pointer";
+
+  homeHint.textContent = "Tip: allow camera/mic permission when prompted.";
+  resetSessionBtn.style.display = "none";
+}
+
+function startSmoothRecordProgress(totalSeconds) {
+  // 取消舊的動畫
+  if (progressRafId) cancelAnimationFrame(progressRafId);
+
+  recordStartTs = performance.now();
+  const totalMs = totalSeconds * 1000;
+
+  const tick = () => {
+    if (state !== State.RECORD) return; // 非錄影狀態就停止更新
+
+    const elapsed = performance.now() - recordStartTs;
+    const pct = totalMs > 0 ? Math.min(100, (elapsed / totalMs) * 100) : 0;
+    recordProgressFill.style.width = pct.toFixed(2) + "%";
+
+    progressRafId = requestAnimationFrame(tick);
+  };
+
+  progressRafId = requestAnimationFrame(tick);
+}
+
+function stopSmoothRecordProgress() {
+  if (progressRafId) cancelAnimationFrame(progressRafId);
+  progressRafId = null;
+}
+
+function setState(next) {
+  state = next;
+  statePill.textContent = next;
+}
+
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+function updateTimerPill(sec) {
+  timerPill.textContent = `${pad2(sec)}`;
+}
+
+function beep(freq=660, ms=160){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = freq;
+    gain.gain.value = 0.12;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    setTimeout(()=>{ osc.stop(); ctx.close(); }, ms);
+  } catch {}
+}
+
+function speakQuestion(text) {
+  return new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) return resolve();
+
+    const synth = window.speechSynthesis;
+
+    // ✅ 清掉上一句 + 強制 resume（Chrome 常會停在 paused）
+    synth.cancel();
+    synth.resume();
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "en-US";
+    utter.rate = 0.95;
+    utter.pitch = 0.7;
+    utter.volume = 1;
+
+    let finished = false;
+    let tried = 0;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      resolve();
+    };
+
+    const pickVoice = () => {
+      const voices = synth.getVoices() || [];
+      const preferred =
+        voices.find(v => (v.lang || "").toLowerCase().startsWith("en") &&
+          /(male|man|alex|david|daniel|tom|fred|george)/i.test(v.name)
+        ) ||
+        voices.find(v => (v.lang || "").toLowerCase().startsWith("en"));
+      if (preferred) utter.voice = preferred;
+    };
+
+    const speakOnce = () => {
+      if (finished) return;
+      tried++;
+
+      synth.cancel();
+      synth.resume();
+      pickVoice();
+
+      // ✅ 真正開始講才算成功（不會立刻 resolve）
+      utter.onend = finish;
+      utter.onerror = () => {
+        // ✅ 失敗就 retry 一次（Chrome/Win 常見第一次會 error）
+        if (tried < 2) {
+          setTimeout(speakOnce, 200);
+        } else {
+          finish(); // 真的不行就別卡住流程
+        }
+      };
+
+      synth.speak(utter);
+    };
+
+    // ✅ 有些瀏覽器 voice list 會晚到：等一下再講（避免空 voice 導致 error）
+    setTimeout(speakOnce, 120);
+  });
+}
+
+
+
+
+function parseQuestions() {
+  const raw = questionBank.value;
+  const lines = raw.split("\n").map(s => s.trim()).filter(Boolean);
+
+  // 題庫沒變就不要重設 qIndex
+  const bankChanged = (raw !== lastQuestionBankText);
+
+  questions = lines.length ? lines : ["Tell us about yourself."];
+
+  if (bankChanged) {
+    qIndex = 0; // 只有題庫內容被你改了，才回到第一題
+    lastQuestionBankText = raw;
+  }
+}
+
+
+function currentQuestion() {
+  if (!questions.length) parseQuestions();
+
+  // ✅ 如果已經超過最後一題，就回傳空字串（或你也可以回最後一題）
+  if (qIndex >= questions.length) return "";
+
+  return questions[qIndex];
+}
+
+
+function nextQuestion() {
+  qIndex = qIndex + 1; // ✅ 不要取餘數，才能走到 questions.length
+}
+
+function hasFinishedAllQuestions() {
+  return qIndex >= questions.length;
+}
+
+/* ---------- Device Handling ---------- */
+async function ensurePermissions() {
+  // 先拿一次權限，才能列出 device label
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    s.getTracks().forEach(t=>t.stop());
+  } catch (e) {
+    // 使用者拒絕也沒關係，之後還會再請求（但沒有 label）
+  }
+}
+
+async function loadDevices() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cams = devices.filter(d=>d.kind === "videoinput");
+  const mics = devices.filter(d=>d.kind === "audioinput");
+
+  cameraSelect.innerHTML = cams.map((d,i)=>
+    `<option value="${d.deviceId}">${d.label || `Camera ${i+1}`}</option>`
+  ).join("") || `<option value="">(no camera found)</option>`;
+
+  micSelect.innerHTML = mics.map((d,i)=>
+    `<option value="${d.deviceId}">${d.label || `Microphone ${i+1}`}</option>`
+  ).join("") || `<option value="">(no microphone found)</option>`;
+}
+
+async function startStream() {
+  // ✅ 如果已經有 stream，就直接重用（不再請求權限）
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.enabled = true);
+
+    const hasVideo = mediaStream.getVideoTracks().length > 0;
+    cameraBg.srcObject = hasVideo ? mediaStream : null;
+
+    cameraBg.muted = true;
+    await cameraBg.play().catch(()=>{});
+    return;
+  }
+
+  const camOn = camToggle.value === "on";
+  const micOn = micToggle.value === "on";
+
+  const videoConstraint = camOn ? {
+    deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
+  } : false;
+
+  const audioConstraint = micOn ? {
+    deviceId: micSelect.value ? { exact: micSelect.value } : undefined
+  } : false;
+
+  if (videoConstraint === false && audioConstraint === false) {
+    cameraBg.srcObject = null;
+    mediaStream = null;
+    return;
+  }
+
+  // 🔴 只有第一次才會跑到這裡 → 只問一次權限
+  mediaStream = await navigator.mediaDevices.getUserMedia({
+    video: videoConstraint,
+    audio: audioConstraint
+  });
+
+  const hasVideo = mediaStream.getVideoTracks().length > 0;
+  cameraBg.srcObject = hasVideo ? mediaStream : null;
+
+  cameraBg.muted = true;
+  await cameraBg.play().catch(()=>{});
+}
+
+
+function stopStream() {
+  if (!mediaStream) return;
+  mediaStream.getTracks().forEach(t=>t.stop());
+  mediaStream = null;
+}
+
+/* ---------- Recording ---------- */
+function pickMimeType() {
+  // 盡量用 webm（Chrome/Edge 最穩）
+  const candidates = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm"
+  ];
+  for (const t of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return ""; // 讓瀏覽器自己決定
+}
+
+function startRecording() {
+  if (!mediaStream) {
+    alert("目前 Cam/Mic 都關閉，無法錄影錄音。至少開啟其中一個。");
+    return;
+  }
+
+  recordedChunks = [];
+  const mimeType = pickMimeType();
+  recorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
+
+  recorder.ondataavailable = (e) => {
+    if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+  };
+
+  recorder.onstop = () => {
+  lastRecordedBlob = new Blob(
+    recordedChunks,
+    { type: recorder.mimeType || "video/webm" }
+  );
+
+  const url = URL.createObjectURL(lastRecordedBlob);
+  playbackVideo.src = url;
+  showPlayback();
+};
+
+
+  recorder.start(200);
+}
+
+function stopRecording() {
+  if (recorder && recorder.state !== "inactive") recorder.stop();
+}
+
+/* ---------- Screens ---------- */
+function showHome() {
+  // 切回畫面
+  homeScreen.style.display = "flex";
+  recordScreen.style.display = "none";
+  playbackScreen.style.display = "none";
+  stopBtn.style.display = "none";
+
+  // 狀態回 HOME
+  setState(State.HOME);
+
+  // 停掉所有計時與錄影
+  clearTimers();
+  stopRecording();
+    // ✅ 不 stop 掉 stream，避免下次 Start 再次請求權限
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.enabled = false);
+  }
+
+
+  // ===== ✅ 重點：reset 錄影視覺（避免殘留）=====
+  recBadge.style.display = "none";              // 關掉 REC 🔴
+  recordProgressWrap.style.display = "none";    // 關掉進度條
+  recordProgressFill.style.width = "0%";        // 進度歸零
+  recordScreen.classList.remove("recording");   // 移除錄影中的背景效果
+
+  // （可選但安全）重置 timer 顯示
+  timerPill.textContent = "00";
+    // ✅ 依 sessionCompleted 決定 Start 可不可以按
+  if (sessionCompleted) lockStartUI();
+  else unlockStartUI();
+
+}
+
+
+function showRecordScreen() {
+  homeScreen.style.display = "none";
+  recordScreen.style.display = "block";
+  playbackScreen.style.display = "none";
+}
+
+function showPlayback() {
+    stopSmoothRecordProgress();
+  playbackScreen.style.display = "block";
+  stopBtn.style.display = "none";
+  setState(State.END);
+  updateTimerPill(0);
+  beep(880, 180);
+    // ✅ 關閉 REC 視覺
+  recBadge.style.display = "none";
+  recordProgressWrap.style.display = "none";
+  recordScreen.classList.remove("recording");
+
+}
+
+function hidePlayback() {
+  playbackScreen.style.display = "none";
+}
+
+/* ---------- Flow: Prep -> Countdown -> Record -> End ---------- */
+function clearTimers() {
+  if (prepTimer) clearInterval(prepTimer);
+  if (recordTimer) clearInterval(recordTimer);
+  prepTimer = null;
+  recordTimer = null;
+}
+
+async function startRun() {
+  parseQuestions();
+// ✅ 保險：如果已經練完全部題目，就回首頁
+if (hasFinishedAllQuestions()) {
+  showHome();
+  return;
+}
+  const prepSeconds = parseInt(prepTimeInput.value);
+  const recordSeconds = parseInt(recordTimeInput.value);
+
+  if (!Number.isFinite(prepSeconds) || prepSeconds < 0) {
+    alert("Prep time 請輸入 0 以上秒數");
+    return;
+  }
+  if (!Number.isFinite(recordSeconds) || recordSeconds < 1) {
+    alert("Record time 請輸入 1 以上秒數");
+    return;
+  }
+
+  // 進錄製畫面（立刻切換）
+  showRecordScreen();
+
+  // ✅ 先 reset 視覺（避免殘留）
+  clearTimers();
+  stopSmoothRecordProgress();
+  countdownOverlay.style.display = "none";
+  recBadge.style.display = "none";
+  recordProgressWrap.style.display = "none";
+  recordProgressFill.style.width = "0%";
+  recordScreen.classList.remove("recording");
+  stopBtn.style.display = "none";
+
+  // ✅ 一進畫面就把「正確的秒數」先顯示出來（左上/左下立刻正確）
+  prepLeft = prepSeconds;
+  recordLeft = recordSeconds;
+
+  prepDisplay.textContent = prepLeft;
+  recordDisplay.textContent = recordLeft;
+
+  setState(State.PREP);
+  updateTimerPill(prepLeft);
+
+  // ✅ 題目也先顯示出來（避免空白）
+  const q = currentQuestion();
+  questionText.textContent = q;
+
+  // ✅ 先講話（講完才開始倒數）
+  await speakQuestion(q);
+
+  // ✅ 再接上攝像頭/麥克風（避免權限彈窗打斷語音）
+  try {
+    await startStream();
+  } catch (e) {
+    alert("無法開啟攝像頭/麥克風。請確認權限或裝置是否可用。");
+  }
+
+  // ✅ 最後才開始 Prep 倒數（最後三秒大 countdown）
+  prepTimer = setInterval(() => {
+    if (state !== State.PREP) return;
+
+    if (prepLeft > 0) {
+      prepLeft--;
+      prepDisplay.textContent = prepLeft;
+      updateTimerPill(prepLeft);
+
+      // 最後 3 秒：大 countdown
+      if (prepLeft <= 3 && prepLeft > 0) {
+        countdownOverlay.style.display = "flex";
+        countdownNumber.textContent = prepLeft;
+        beep(740, 140);
+      } else {
+        countdownOverlay.style.display = "none";
+      }
+    } else {
+      clearInterval(prepTimer);
+      countdownOverlay.style.display = "none";
+      beginRecordPhase();
+    }
+  }, 1000);
+}
+
+
+
+
+function beginRecordPhase() {
+  setState(State.RECORD);
+  stopBtn.style.display = "inline-block";
+  updateTimerPill(recordLeft);
+
+  // ✅ 開啟 REC 視覺
+  recBadge.style.display = "inline-flex";
+  recordProgressWrap.style.display = "block";
+  recordProgressFill.style.width = "0%";
+  recordScreen.classList.add("recording");
+
+  const total = recordLeft; // 總錄影秒數
+
+  // ✅ 開始絲滑進度條（每幀更新）
+  startSmoothRecordProgress(total);
+
+  // 開始錄影錄音
+  startRecording();
+
+  // 倒數（仍然 1 秒更新一次文字）
+  recordTimer = setInterval(() => {
+    if (state !== State.RECORD) return;
+
+    if (recordLeft > 0) {
+      recordLeft--;
+      recordDisplay.textContent = recordLeft;
+      updateTimerPill(recordLeft);
+    } else {
+      clearInterval(recordTimer);
+
+      // ✅ 收尾：停止絲滑進度條，固定 100%
+      stopSmoothRecordProgress();
+      recordProgressFill.style.width = "100%";
+
+      stopRecording();
+      // onstop 會進 playback
+    }
+  }, 1000);
+}
+
+
+
+/* ---------- UI Events ---------- */
+downloadBtn.addEventListener("click", () => {
+  if (!lastRecordedBlob) {
+    alert("No video to download.");
+    return;
+  }
+
+  const url = URL.createObjectURL(lastRecordedBlob);
+  const a = document.createElement("a");
+  a.href = url;
+
+  // 檔名：video-essay-q1.webm 這種
+  a.download = `video-essay-q${qIndex}.webm`;
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // 清掉暫時 URL
+  URL.revokeObjectURL(url);
+});
+
+resetSessionBtn.addEventListener("click", () => {
+  sessionCompleted = false;
+  qIndex = 0;          // 從第一題重新開始
+  unlockStartUI();
+});
+
+homeBtn.addEventListener("click", () => {
+  hidePlayback();
+  showHome();
+});
+
+goStart.addEventListener("click", () => {
+  if (sessionCompleted) return; // ✅ 練完就鎖住
+  startRun();
+});
+
+
+backHome.addEventListener("click", () => showHome());
+
+
+stopBtn.addEventListener("click", () => {
+  clearTimers();
+  stopRecording();
+});
+
+closePlayback.addEventListener("click", () => hidePlayback());
+
+retakeBtn.addEventListener("click", async () => {
+  hidePlayback();
+  // 同一題重錄：重新跑一次（不換題）
+  await startRun();
+});
+
+nextBtn.addEventListener("click", async () => {
+  hidePlayback();
+  nextQuestion();
+
+  // ✅ 如果所有題目都練完 → 回首頁並鎖 Start
+  if (hasFinishedAllQuestions()) {
+    sessionCompleted = true;
+    showHome();
+    lockStartUI();
+    return;
+  }
+
+  await startRun();
+});
+
+
+
+
+
+
+// 在錄製畫面切換 Cam/Mic：重新拉 stream（不影響目前已開始錄的這次；建議在錄前切）
+camToggle.addEventListener("change", async () => {
+  if (recordScreen.style.display !== "block") return;
+  // 若正在錄影：強烈建議不要中途換（不同瀏覽器行為不一致）
+  if (state === State.RECORD) return;
+  try { await startStream(); } catch {}
+});
+
+micToggle.addEventListener("change", async () => {
+  if (recordScreen.style.display !== "block") return;
+  if (state === State.RECORD) return;
+  try { await startStream(); } catch {}
+});
+
+// 進入頁面先要權限（可讓裝置列表顯示名稱）
+(async function init() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert("此瀏覽器不支援攝像頭/麥克風 API。請用最新版 Chrome/Edge。");
+    return;
+  }
+  await ensurePermissions();
+  await loadDevices();
+
+  // 裝置變動（插拔）更新
+  navigator.mediaDevices.addEventListener?.("devicechange", async () => {
+    await loadDevices();
+  });
+})();
+
+// 初始
+showHome();
+
+
+</script>
+</body>
+</html>
