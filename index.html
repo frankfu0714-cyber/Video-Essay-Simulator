@@ -369,6 +369,35 @@
     overflow: hidden;
   }
 }
+/* ===== Mobile: keep question centered and not overlapping UI ===== */
+@media (max-width: 600px) {
+
+  /* 題目整個區塊往下，避開 topbar */
+  .questionBox {
+    top: 92px !important;      /* 你可微調：80~110 都行 */
+    left: 10px !important;
+    right: 10px !important;
+  }
+
+  /* 題目本體：置中、可換行、不會超出 */
+  .questionInner {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 10px 12px !important;
+    font-size: 16px !important;        /* 手機字稍微小一點 */
+    line-height: 1.35 !important;
+    text-align: center !important;
+
+    /* ✅ 關鍵：英文長句要能斷行 */
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  /* 讓底部 controls 留出空間，避免題目撞到 Prep/Record */
+  .controls {
+    bottom: 12px !important;
+  }
+}
 
     
   </style>
@@ -1343,6 +1372,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
