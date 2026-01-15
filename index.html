@@ -368,12 +368,24 @@
 /* ===== Mobile: keep question centered and not overlapping UI ===== */
 @media (max-width: 600px) {
 
-  /* 題目整個區塊往下，避開 topbar */
+  
+  /* ===== Mobile: question always below CAM / MIC bar ===== */
+@media (max-width: 600px) {
   .questionBox {
-    top: 800px !important;      /* 你可微調：80~110 都行 */
+    top: calc(64px + 12px) !important;
+    /* 64px ≈ topbar 高度，12px = 安全間距 */
+
     left: 10px !important;
     right: 10px !important;
   }
+
+  .questionInner {
+    text-align: center !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+}
+
 
   /* 題目本體：置中、可換行、不會超出 */
   .questionInner {
@@ -1484,6 +1496,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
