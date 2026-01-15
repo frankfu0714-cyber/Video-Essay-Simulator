@@ -398,6 +398,106 @@
     bottom: 12px !important;
   }
 }
+/* ===== Record screen: mobile layout (everything fits in one viewport) ===== */
+@media (max-width: 600px) {
+  /* 上方條更緊湊 */
+  .topbar {
+    top: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    gap: 8px !important;
+    align-items: flex-start !important;
+  }
+
+  /* 讓 topbar 左右兩塊在小螢幕能放得下：必要時換行 */
+  .topbar .row {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* 右上控制面板縮小 */
+  .topbar .panel {
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .topbar .panel label {
+    font-size: 12px !important;
+    gap: 4px !important;
+  }
+
+  .topbar .panel select {
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+
+  .topbar .panel .btn {
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* 左上 pill 縮小 */
+  .pill {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+
+  /* 進度條縮短，避免擠爆 */
+  .progressWrap {
+    width: 45vw !important;
+    height: 8px !important;
+  }
+
+  /* 題目區往上，但不蓋到 topbar；字略縮、可斷行 */
+  .questionBox {
+    top: 86px !important;     /* 你若覺得太擠，可改 92~105 */
+    left: 10px !important;
+    right: 10px !important;
+  }
+
+  .questionInner {
+    padding: 10px 12px !important;
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    text-align: center !important;
+  }
+
+  /* 下方控制列縮小，確保同畫面看得到 */
+  .controls {
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    gap: 8px !important;
+  }
+
+  .controls .panel {
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Stop 按鈕縮小 */
+  #stopBtn {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    border-radius: 12px !important;
+  }
+}
+/* ===== Lock scrolling when recording screen is active ===== */
+body.lock-scroll {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* iOS Safari 防止彈性滾動 */
+body.lock-scroll {
+  position: fixed;
+  width: 100%;
+}
 
     
   </style>
@@ -822,6 +922,14 @@ function setState(next) {
   statePill.textContent = next;
 }
 
+  function lockScroll() {
+  document.body.classList.add("lock-scroll");
+}
+
+function unlockScroll() {
+  document.body.classList.remove("lock-scroll");
+}
+
 function pad2(n){ return String(n).padStart(2,"0"); }
 
 function updateTimerPill(sec) {
@@ -1080,6 +1188,10 @@ function showHome() {
     // ✅ 不 stop 掉 stream，避免下次 Start 再次請求權限
   if (mediaStream) {
     mediaStream.getTracks().forEach(t => t.enabled = false);
+    
+    // ✅ 回首頁才允許上下滑動
+  unlockScroll();
+
   }
 
 
@@ -1107,6 +1219,10 @@ function showRecordScreen() {
 
     // ✅ Start 後隱藏個人連結
   if (personalLinks) personalLinks.style.display = "none";
+  
+    // ✅ Start 後禁止上下滑動（手機/電腦都一樣）
+  lockScroll();
+
 }
 
 function showPlayback() {
@@ -1372,6 +1488,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
