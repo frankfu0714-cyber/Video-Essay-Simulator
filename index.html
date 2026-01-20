@@ -958,10 +958,10 @@ function buildQuestionOrder() {
   questionCursor = 0;
 }
 
-function getgetgetCurrentQuestion() {
+function getCurrentQuestion() {
   if (!questions.length) return "Tell us about yourself.";
   const idx = questionOrder[questionCursor] ?? 0;
-  return questions[idx];
+  return questions[idx] ?? "Tell us about yourself.";
 }
 
 function advanceQuestion() {
@@ -1065,23 +1065,7 @@ function parseQuestions() {
 
 
 
-function getCurrentQuestion() {
-  if (!questions.length) parseQuestions();
 
-  // ✅ 如果已經超過最後一題，就回傳空字串（或你也可以回最後一題）
-  if (qIndex >= questions.length) return "";
-
-  return questions[qIndex];
-}
-
-
-function nextQuestion() {
-  qIndex = qIndex + 1; // ✅ 不要取餘數，才能走到 questions.length
-}
-
-function hasFinishedAllQuestions() {
-  return qIndex >= questions.length;
-}
 
 /* ---------- Device Handling ---------- */
 async function ensurePermissions() {
@@ -1237,9 +1221,9 @@ function showHome() {
 
   // （可選但安全）重置 timer 顯示
   timerPill.textContent = "00";
-    // ✅ 依 sessionCompleted 決定 Start 可不可以按
-  if (sessionCompleted) lockStartUI();
-  else unlockStartUI();
+    /// ✅ 回首頁：永遠允許 Start（除非你想鎖住）
+unlockStartUI();
+
   // ✅ 回首頁時顯示個人連結
   if (personalLinks) personalLinks.style.display = "flex";
 
@@ -1287,11 +1271,16 @@ function clearTimers() {
 
 async function startRun() {
   parseQuestions();
-// ✅ 保險：如果已經練完全部題目，就回首頁
-if (hasFinishedAllQuestions()) {
+
+// ✅ 如果題庫沒建立順序（保險），先建立
+if (!questionOrder.length) buildQuestionOrder();
+
+// ✅ 一次模式：做完就回首頁（保險）
+if ((practiceMode === "sequential_once" || practiceMode === "random_once") && hasFinishedAllQuestionsOnce()) {
   showHome();
   return;
 }
+
   const prepSeconds = parseInt(prepTimeInput.value);
   const recordSeconds = parseInt(recordTimeInput.value);
 
@@ -1422,7 +1411,8 @@ downloadBtn.addEventListener("click", () => {
   a.href = url;
 
   // 檔名：video-essay-q1.webm 這種
-  a.download = `video-essay-q${qIndex}.webm`;
+  a.download = `video-essay-q${questionCursor + 1}.webm`;
+
 
   document.body.appendChild(a);
   a.click();
@@ -1433,10 +1423,12 @@ downloadBtn.addEventListener("click", () => {
 });
 
 resetSessionBtn.addEventListener("click", () => {
-  sessionCompleted = false;
-  qIndex = 0;          // 從第一題重新開始
+  // 重新開始：重建順序 + 指標歸零
+  parseQuestions();
+  buildQuestionOrder();
   unlockStartUI();
 });
+
 
 homeBtn.addEventListener("click", () => {
   hidePlayback();
@@ -1531,6 +1523,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
