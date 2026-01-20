@@ -538,6 +538,17 @@ body.lock-scroll {
           <option value="">(loading devices...)</option>
         </select>
       </label>
+      
+      <label>
+  Practice Mode
+  <select id="modeSelect">
+    <option value="sequential_once" selected>Sequential (each question once)</option>
+    <option value="random_once">Random (each question once)</option>
+    <option value="sequential_marathon">Marathon (sequential loop)</option>
+    <option value="random_marathon">Marathon (random loop)</option>
+  </select>
+</label>
+
     </div>
 
     <div style="height:12px"></div>
@@ -794,14 +805,17 @@ let prepLeft = 0;
 let recordLeft = 0;
 
 let questions = [];
-let qIndex = 0;
-let sessionCompleted = false;
+let questionOrder = [];   // 存「題目索引」的順序（可隨機/可循環）
+let questionCursor = 0;   // 目前做到第幾題（指向 questionOrder）
+let practiceMode = "sequential_once";
+
 
 
 let lastQuestionBankText = "";
 
 // DOM
 const downloadBtn = document.getElementById("downloadBtn");
+const modeSelect = document.getElementById("modeSelect");
 
 const resetSessionBtn = document.getElementById("resetSessionBtn");
 const homeHint = document.getElementById("homeHint");
@@ -925,7 +939,54 @@ function beep(freq=660, ms=160){
     setTimeout(()=>{ osc.stop(); ctx.close(); }, ms);
   } catch {}
 }
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
+function buildQuestionOrder() {
+  // 建立 0..n-1 的索引陣列
+  questionOrder = Array.from({ length: questions.length }, (_, i) => i);
+
+  if (practiceMode === "random_once" || practiceMode === "random_marathon") {
+    shuffleArray(questionOrder);
+  }
+
+  questionCursor = 0;
+}
+
+function getgetgetCurrentQuestion() {
+  if (!questions.length) return "Tell us about yourself.";
+  const idx = questionOrder[questionCursor] ?? 0;
+  return questions[idx];
+}
+
+function advanceQuestion() {
+  questionCursor++;
+
+  // 一次模式：走到最後就結束
+  if (practiceMode === "sequential_once" || practiceMode === "random_once") {
+    return;
+  }
+
+  // 馬拉松模式：走到最後就循環
+  if (questionCursor >= questionOrder.length) {
+    questionCursor = 0;
+    // 隨機馬拉松：每一輪重新洗牌（確保每題仍然每輪只出一次）
+    if (practiceMode === "random_marathon") {
+      shuffleArray(questionOrder);
+    }
+  }
+}
+
+function hasFinishedAllQuestionsOnce() {
+  return questionCursor >= questionOrder.length;
+}
+
+  
 function speakQuestion(text) {
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) return resolve();
@@ -992,22 +1053,19 @@ function speakQuestion(text) {
 
 
 function parseQuestions() {
-  const raw = questionBank.value;
-  const lines = raw.split("\n").map(s => s.trim()).filter(Boolean);
+  const lines = questionBank.value
+    .split("\n")
+    .map(s => s.trim())
+    .filter(Boolean);
 
-  // 題庫沒變就不要重設 qIndex
-  const bankChanged = (raw !== lastQuestionBankText);
-
-  questions = lines.length ? lines : ["Tell us about yourself."];
-
-  if (bankChanged) {
-    qIndex = 0; // 只有題庫內容被你改了，才回到第一題
-    lastQuestionBankText = raw;
-  }
+  questions = lines.length
+    ? lines
+    : ["Tell us about yourself."];
 }
 
 
-function currentQuestion() {
+
+function getCurrentQuestion() {
   if (!questions.length) parseQuestions();
 
   // ✅ 如果已經超過最後一題，就回傳空字串（或你也可以回最後一題）
@@ -1270,11 +1328,10 @@ if (hasFinishedAllQuestions()) {
   updateTimerPill(prepLeft);
 
   // ✅ 題目也先顯示出來（避免空白）
-  const q = currentQuestion();
-  questionText.textContent = q;
+  const q = getCurrentQuestion();
+  questionText.textContent = getCurrentQuestion();
+await speakQuestion(getCurrentQuestion());
 
-  // ✅ 先講話（講完才開始倒數）
-  await speakQuestion(q);
 
   // ✅ 再接上攝像頭/麥克風（避免權限彈窗打斷語音）
   try {
@@ -1386,10 +1443,18 @@ homeBtn.addEventListener("click", () => {
   showHome();
 });
 
-goStart.addEventListener("click", () => {
-  if (sessionCompleted) return; // ✅ 練完就鎖住
-  startRun();
+goStart.addEventListener("click", async () => {
+  // 讀取模式
+  practiceMode = modeSelect?.value || "sequential_once";
+
+  // 解析題庫 + 建立順序（只做一次）
+  parseQuestions();
+  buildQuestionOrder();
+
+  // 開始第一題
+  await startRun();
 });
+
 
 
 backHome.addEventListener("click", () => showHome());
@@ -1410,18 +1475,20 @@ retakeBtn.addEventListener("click", async () => {
 
 nextBtn.addEventListener("click", async () => {
   hidePlayback();
-  nextQuestion();
 
-  // ✅ 如果所有題目都練完 → 回首頁並鎖 Start
-  if (hasFinishedAllQuestions()) {
-    sessionCompleted = true;
+  // 前進到下一題
+  advanceQuestion();
+
+  // ✅ 一次模式：全部做完 → 回首頁
+  if ((practiceMode === "sequential_once" || practiceMode === "random_once") && hasFinishedAllQuestionsOnce()) {
     showHome();
-    lockStartUI();
     return;
   }
 
+  // 否則繼續跑下一題
   await startRun();
 });
+
 
 
 
@@ -1464,6 +1531,7 @@ showHome();
 </script>
 </body>
 </html>
+
 
 
 
