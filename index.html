@@ -749,17 +749,12 @@ Tell us about a time you received tough feedback.</textarea>
 </section>
 
 <script type="module">
-  // Firebase SDK (modular)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import {
-  getStorage,
-  ref as sRef,
-  uploadBytes,
-  uploadBytesResumable,   // ✅ 加這個
-  getDownloadURL,
-  deleteObject
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
 
+  import {
+    getFirestore, collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
   import {
     getAuth,
@@ -775,12 +770,11 @@ Tell us about a time you received tough feedback.</textarea>
   import {
     getStorage,
     ref as sRef,
-    uploadBytes,
+    uploadBytesResumable,
     getDownloadURL,
     deleteObject
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
 
-  // ✅ 你的 Firebase config（你已經有了，保留即可）
   const firebaseConfig = {
     apiKey: "AIzaSyAoCsZKLfwPVlQ-4rNukikuAgzR3_oLfmg",
     authDomain: "video-essay-simulator.firebaseapp.com",
@@ -844,11 +838,7 @@ Tell us about a time you received tough feedback.</textarea>
     commentStatus.textContent = "Posting...";
 
     try {
-      await addDoc(commentsRef, {
-        name: name || "Anonymous",
-        text,
-        createdAt: serverTimestamp()
-      });
+      await addDoc(commentsRef, { name: name || "Anonymous", text, createdAt: serverTimestamp() });
       commentText.value = "";
       commentStatus.textContent = "Posted ✅";
       setTimeout(() => (commentStatus.textContent = "Be kind and constructive 🙂"), 1200);
@@ -869,7 +859,6 @@ Tell us about a time you received tough feedback.</textarea>
   const myVideosList = document.getElementById("myVideosList");
   const myVideosHint = document.getElementById("myVideosHint");
 
-  // 小型 Email 登入/註冊 modal（用 JS 動態插入，避免你貼一堆 HTML）
   const modal = document.createElement("div");
   modal.id = "authModal";
   modal.style.cssText = `
@@ -918,13 +907,9 @@ Tell us about a time you received tough feedback.</textarea>
   const emailInput = modal.querySelector("#emailInput");
   const passwordInput = modal.querySelector("#passwordInput");
 
-  function openAuthModal(message="") {
-    authMsg.textContent = message || "";
-    modal.style.display = "flex";
-  }
-  function closeAuthModal() {
-    modal.style.display = "none";
-  }
+  function openAuthModal(message="") { authMsg.textContent = message || ""; modal.style.display = "flex"; }
+  function closeAuthModal() { modal.style.display = "none"; }
+
   modal.querySelector("#authModalClose").addEventListener("click", closeAuthModal);
   modal.addEventListener("click", (e) => { if (e.target === modal) closeAuthModal(); });
 
@@ -982,34 +967,27 @@ Tell us about a time you received tough feedback.</textarea>
   });
 
   function renderAuthHome(user) {
-  if (!authHomeArea) return;
+    if (!authHomeArea) return;
 
-  if (!user) {
+    if (!user) {
+      authHomeArea.innerHTML = `<button class="btn btn-primary" id="homeSignInBtn">Sign in</button>`;
+      authHomeArea.querySelector("#homeSignInBtn")?.addEventListener("click", () => openAuthModal());
+      return;
+    }
+
+    const label = user.email ? user.email : "Signed in";
     authHomeArea.innerHTML = `
-      <button class="btn btn-primary" id="homeSignInBtn">Sign in</button>
+      <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
+      // <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
+      <button class="btn btn-primary" id="homeSignOutBtn">Sign out</button>
     `;
-    authHomeArea.querySelector("#homeSignInBtn")
-      ?.addEventListener("click", () => openAuthModal());
-    return;
+    authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
+      await signOut(auth);
+    });
   }
 
-  const label = user.email ? user.email : "Signed in";
-  authHomeArea.innerHTML = `
-    <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
-    <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
-  `;
-  authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
-    await signOut(auth);
-  });
-}
-
-
-  /* =========================
-     Save video + My Videos
-     ========================= */
   function userCanSave(user) {
     if (!user) return false;
-    // Google 會是 verified；Email/Password 需要驗證
     return user.emailVerified || user.providerData?.some(p => p.providerId === "google.com");
   }
 
@@ -1067,10 +1045,7 @@ Tell us about a time you received tough feedback.</textarea>
         item.querySelector(`[data-del="${d.id}"]`)?.addEventListener("click", async () => {
           if (!confirm("Delete this saved video?")) return;
           try {
-            // storagePath 是必要的（用來刪檔）
-            if (v.storagePath) {
-              await deleteObject(sRef(storage, v.storagePath));
-            }
+            if (v.storagePath) await deleteObject(sRef(storage, v.storagePath));
             await deleteDoc(doc(db, "users", user.uid, "videos", d.id));
           } catch (e) {
             console.error(e);
@@ -1092,50 +1067,39 @@ Tell us about a time you received tough feedback.</textarea>
     const expiresAt = Timestamp.fromDate(new Date(now + 14 * 24 * 60 * 60 * 1000));
 
     const title = meta.title || `Video - ${new Date(now).toLocaleString()}`;
-    const ext = "webm";
-    const fileName = `${now}_${meta.qKey || "q"}_.${ext}`;
+    const fileName = `${now}_${meta.qKey || "q"}_.webm`;
     const storagePath = `videos/${user.uid}/${fileName}`;
 
-    // 1) upload storage (resumable + progress)
-const fileRef = sRef(storage, storagePath);
+    const fileRef = sRef(storage, storagePath);
 
-await new Promise((resolve, reject) => {
-  const task = uploadBytesResumable(fileRef, blob, { contentType: blob.type || "video/webm" });
+    await new Promise((resolve, reject) => {
+      const task = uploadBytesResumable(fileRef, blob, { contentType: blob.type || "video/webm" });
+      task.on("state_changed",
+        (snap) => {
+          const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
+          const btn = document.getElementById("saveBtn");
+          if (btn) btn.textContent = `Saving... ${pct}%`;
+        },
+        (err) => reject(err),
+        () => resolve()
+      );
+    });
 
-  task.on("state_changed",
-    (snap) => {
-      const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
-      // ✅ 讓 UI 也能顯示進度（可選）
-      const btn = document.getElementById("saveBtn");
-      if (btn) btn.textContent = `Saving... ${pct}%`;
-    },
-    (err) => reject(err),
-    () => resolve()
-  );
-});
-
-
-    // 2) get download URL
     const downloadURL = await getDownloadURL(fileRef);
 
-    // 3) save metadata
     await addDoc(userVideosCol(user.uid), {
       title,
       storagePath,
       downloadURL,
       createdAt: serverTimestamp(),
       expiresAt,
-      meta: {
-        ...(meta || {}),
-        mime: blob.type || "video/webm",
-        size: blob.size || 0
-      }
+      meta: { ...(meta || {}), mime: blob.type || "video/webm", size: blob.size || 0 }
     });
 
     return downloadURL;
   }
 
-  // ✅ expose to your main <script>
+  // expose
   window.getAuthUser = () => auth.currentUser;
   window.openAuthModal = (msg="") => openAuthModal(msg);
   window.saveVideoBlob = (blob, meta={}) => saveVideoBlob(blob, meta);
@@ -1146,6 +1110,7 @@ await new Promise((resolve, reject) => {
     startMyVideosListener(user);
   });
 </script>
+
 
 
 
@@ -1971,6 +1936,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
