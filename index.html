@@ -608,8 +608,11 @@ Tell us about a time you received tough feedback.</textarea>
 
     <div style="height:14px"></div>
 
-    <div class="row" style="justify-content:space-between;">
+    <div class="row" style="justify-content:space-between; gap:12px; flex-wrap:wrap;">
   <div class="muted" id="homeHint">Tip: allow camera/mic permission when prompted.</div>
+
+  <!-- ✅ 登入區（Home） -->
+  <div class="row" id="authHomeArea"></div>
 
   <div class="row">
     <button class="btn btn-ghost" id="resetSessionBtn" style="display:none;">Reset Session</button>
@@ -617,9 +620,19 @@ Tell us about a time you received tough feedback.</textarea>
   </div>
 </div>
 
+
   </div>
   <div class="card" style="margin-top:16px;">
   <h2 style="margin-bottom:10px;">Comments</h2>
+    
+    <div class="card" id="myVideosCard" style="margin-top:16px; display:none;">
+  <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+    <h2 style="margin:0;">My Videos</h2>
+    <div class="muted" id="myVideosHint">Sign in to see saved videos.</div>
+  </div>
+  <div id="myVideosList"></div>
+</div>
+
 
   <div class="grid" style="grid-template-columns: 1fr 1fr; align-items:end;">
     <label>
@@ -721,6 +734,7 @@ Tell us about a time you received tough feedback.</textarea>
           <button class="btn btn-ghost" id="retakeBtn">Retake</button>
           <button class="btn btn-primary" id="nextBtn">Next Question</button>
           <button class="btn btn-ghost" id="homeBtn">Home</button>
+          <button class="btn btn-ghost" id="saveBtn">Save</button>
           <button class="btn btn-ghost" id="downloadBtn">Download</button>
           <button class="btn btn-ghost" id="closePlayback">Close</button>
         </div>
@@ -739,39 +753,60 @@ Tell us about a time you received tough feedback.</textarea>
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import {
     getFirestore, collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, limit
+    query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp
   } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-  // ✅ 1) 你要把這裡換成你自己的 Firebase config（從 Firebase Console 複製）
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    sendEmailVerification,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+
+  import {
+    getStorage,
+    ref as sRef,
+    uploadBytes,
+    getDownloadURL,
+    deleteObject
+  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
+
+  // ✅ 你的 Firebase config（你已經有了，保留即可）
   const firebaseConfig = {
-  apiKey: "AIzaSyAoCsZKLfwPVlQ-4rNukikuAgzR3_oLfmg",
-  authDomain: "video-essay-simulator.firebaseapp.com",
-  projectId: "video-essay-simulator",
-  storageBucket: "video-essay-simulator.firebasestorage.app",
-  messagingSenderId: "455293481653",
-  appId: "1:455293481653:web:32d2e02c23cf9a68a1c4fc",
-  measurementId: "G-N6X8VQ3Z6F"
-    
+    apiKey: "AIzaSyAoCsZKLfwPVlQ-4rNukikuAgzR3_oLfmg",
+    authDomain: "video-essay-simulator.firebaseapp.com",
+    projectId: "video-essay-simulator",
+    storageBucket: "video-essay-simulator.firebasestorage.app",
+    messagingSenderId: "455293481653",
+    appId: "1:455293481653:web:32d2e02c23cf9a68a1c4fc",
+    measurementId: "G-N6X8VQ3Z6F"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
 
-  // DOM
+  /* =========================
+     Comments (public)
+     ========================= */
   const commentName = document.getElementById("commentName");
   const commentText = document.getElementById("commentText");
   const submitComment = document.getElementById("submitComment");
   const commentList = document.getElementById("commentList");
   const commentStatus = document.getElementById("commentStatus");
 
-  // 讀取留言（最新 50 則）
   const commentsRef = collection(db, "comments");
-  const q = query(commentsRef, orderBy("createdAt", "desc"), limit(50));
+  const commentsQ = query(commentsRef, orderBy("createdAt", "desc"), limit(50));
 
-  onSnapshot(q, (snap) => {
+  onSnapshot(commentsQ, (snap) => {
     commentList.innerHTML = "";
-    snap.forEach(doc => {
-      const d = doc.data();
+    snap.forEach(docu => {
+      const d = docu.data();
       const name = (d.name || "Anonymous").replaceAll("<", "&lt;");
       const text = (d.text || "").replaceAll("<", "&lt;");
       const ts = d.createdAt?.toDate ? d.createdAt.toDate() : null;
@@ -790,8 +825,7 @@ Tell us about a time you received tough feedback.</textarea>
     });
   });
 
-  // 發佈留言
-  submitComment.addEventListener("click", async () => {
+  submitComment?.addEventListener("click", async () => {
     const name = (commentName.value || "").trim().slice(0, 30);
     const text = (commentText.value || "").trim().slice(0, 300);
 
@@ -810,7 +844,6 @@ Tell us about a time you received tough feedback.</textarea>
         text,
         createdAt: serverTimestamp()
       });
-
       commentText.value = "";
       commentStatus.textContent = "Posted ✅";
       setTimeout(() => (commentStatus.textContent = "Be kind and constructive 🙂"), 1200);
@@ -822,7 +855,276 @@ Tell us about a time you received tough feedback.</textarea>
       submitComment.style.opacity = "1";
     }
   });
+
+  /* =========================
+     Auth UI (Home + Playback trigger)
+     ========================= */
+  const authHomeArea = document.getElementById("authHomeArea");
+  const myVideosCard = document.getElementById("myVideosCard");
+  const myVideosList = document.getElementById("myVideosList");
+  const myVideosHint = document.getElementById("myVideosHint");
+
+  // 小型 Email 登入/註冊 modal（用 JS 動態插入，避免你貼一堆 HTML）
+  const modal = document.createElement("div");
+  modal.id = "authModal";
+  modal.style.cssText = `
+    position:fixed; inset:0; display:none; z-index:99999;
+    background:rgba(0,0,0,0.6); align-items:center; justify-content:center;
+    padding:16px;
+  `;
+  modal.innerHTML = `
+    <div style="width:min(520px,100%); background:#fff; border-radius:16px; padding:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="font-weight:900; font-size:1.1rem;">Sign in to save videos</div>
+        <button id="authModalClose" class="btn btn-ghost" style="background:#eee; color:#111;">Close</button>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="googleBtn" class="btn btn-primary">Continue with Google</button>
+      </div>
+
+      <div style="height:14px"></div>
+      <div style="font-weight:900; margin-bottom:8px;">Email</div>
+
+      <div style="display:grid; grid-template-columns:1fr; gap:10px;">
+        <input id="emailInput" placeholder="Email" style="padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:1rem;">
+        <input id="passwordInput" placeholder="Password" type="password" style="padding:10px 12px; border-radius:10px; border:1px solid #ddd; font-size:1rem;">
+      </div>
+
+      <div style="height:12px"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="emailSignInBtn" class="btn btn-primary">Sign in</button>
+        <button id="emailSignUpBtn" class="btn btn-ghost" style="background:#eee; color:#111;">Create account</button>
+        <button id="verifyBtn" class="btn btn-ghost" style="background:#eee; color:#111;">Resend verification</button>
+      </div>
+
+      <div style="height:10px"></div>
+      <div id="authMsg" style="font-weight:700; color:#333;"></div>
+      <div style="font-size:0.9rem; opacity:0.8; margin-top:6px;">
+        Note: Email users must verify their email before saving videos.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const authMsg = modal.querySelector("#authMsg");
+  const emailInput = modal.querySelector("#emailInput");
+  const passwordInput = modal.querySelector("#passwordInput");
+
+  function openAuthModal(message="") {
+    authMsg.textContent = message || "";
+    modal.style.display = "flex";
+  }
+  function closeAuthModal() {
+    modal.style.display = "none";
+  }
+  modal.querySelector("#authModalClose").addEventListener("click", closeAuthModal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeAuthModal(); });
+
+  modal.querySelector("#googleBtn").addEventListener("click", async () => {
+    authMsg.textContent = "Signing in...";
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      closeAuthModal();
+    } catch (e) {
+      console.error(e);
+      authMsg.textContent = "Google sign-in failed. Please try again.";
+    }
+  });
+
+  modal.querySelector("#emailSignUpBtn").addEventListener("click", async () => {
+    const email = (emailInput.value || "").trim();
+    const pass = (passwordInput.value || "").trim();
+    if (!email || !pass) return authMsg.textContent = "Please enter email and password.";
+    authMsg.textContent = "Creating account...";
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, pass);
+      await sendEmailVerification(cred.user);
+      authMsg.textContent = "Account created ✅ Verification email sent. Please verify then sign in.";
+    } catch (e) {
+      console.error(e);
+      authMsg.textContent = e?.message || "Sign up failed.";
+    }
+  });
+
+  modal.querySelector("#emailSignInBtn").addEventListener("click", async () => {
+    const email = (emailInput.value || "").trim();
+    const pass = (passwordInput.value || "").trim();
+    if (!email || !pass) return authMsg.textContent = "Please enter email and password.";
+    authMsg.textContent = "Signing in...";
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      closeAuthModal();
+    } catch (e) {
+      console.error(e);
+      authMsg.textContent = e?.message || "Sign in failed.";
+    }
+  });
+
+  modal.querySelector("#verifyBtn").addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) return authMsg.textContent = "Please sign in first.";
+    try {
+      await sendEmailVerification(user);
+      authMsg.textContent = "Verification email sent ✅";
+    } catch (e) {
+      console.error(e);
+      authMsg.textContent = "Failed to send verification email.";
+    }
+  });
+
+  function renderAuthHome(user) {
+    if (!authHomeArea) return;
+
+    if (!user) {
+      authHomeArea.innerHTML = `
+        <button class="btn btn-ghost" id="homeSignInBtn">Sign in (Save)</button>
+      `;
+      authHomeArea.querySelector("#homeSignInBtn")?.addEventListener("click", () => openAuthModal());
+      return;
+    }
+
+    const label = user.email ? user.email : "Signed in";
+    authHomeArea.innerHTML = `
+      <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
+      <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
+    `;
+    authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+  }
+
+  /* =========================
+     Save video + My Videos
+     ========================= */
+  function userCanSave(user) {
+    if (!user) return false;
+    // Google 會是 verified；Email/Password 需要驗證
+    return user.emailVerified || user.providerData?.some(p => p.providerId === "google.com");
+  }
+
+  function userVideosCol(uid) {
+    return collection(db, "users", uid, "videos");
+  }
+
+  let unsubscribeMyVideos = null;
+
+  function startMyVideosListener(user) {
+    if (unsubscribeMyVideos) unsubscribeMyVideos();
+    unsubscribeMyVideos = null;
+
+    if (!myVideosCard || !myVideosList) return;
+
+    if (!user) {
+      myVideosCard.style.display = "none";
+      myVideosList.innerHTML = "";
+      myVideosHint.textContent = "Sign in to see saved videos.";
+      return;
+    }
+
+    myVideosCard.style.display = "block";
+
+    const qv = query(userVideosCol(user.uid), orderBy("createdAt", "desc"), limit(30));
+    unsubscribeMyVideos = onSnapshot(qv, (snap) => {
+      myVideosList.innerHTML = "";
+
+      if (snap.empty) {
+        myVideosList.innerHTML = `<div class="muted">No saved videos yet.</div>`;
+        return;
+      }
+
+      snap.forEach((d) => {
+        const v = d.data();
+        const title = (v.title || "Video").replaceAll("<","&lt;");
+        const created = v.createdAt?.toDate ? v.createdAt.toDate().toLocaleString() : "";
+        const expires = v.expiresAt?.toDate ? v.expiresAt.toDate().toLocaleDateString() : "";
+        const url = v.downloadURL || "";
+
+        const item = document.createElement("div");
+        item.className = "commentItem";
+        item.innerHTML = `
+          <div class="commentMeta">
+            <div style="font-weight:900;">${title}</div>
+            <div class="commentTime">${created}</div>
+          </div>
+          <div class="muted" style="margin-top:6px;">Expires: ${expires}</div>
+          <div class="row" style="margin-top:10px;">
+            <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Play</a>
+            <a class="btn btn-ghost" style="background:#eee; color:#111;" href="${url}" download>Download</a>
+            <button class="btn btn-danger" data-del="${d.id}">Delete</button>
+          </div>
+        `;
+        item.querySelector(`[data-del="${d.id}"]`)?.addEventListener("click", async () => {
+          if (!confirm("Delete this saved video?")) return;
+          try {
+            // storagePath 是必要的（用來刪檔）
+            if (v.storagePath) {
+              await deleteObject(sRef(storage, v.storagePath));
+            }
+            await deleteDoc(doc(db, "users", user.uid, "videos", d.id));
+          } catch (e) {
+            console.error(e);
+            alert("Delete failed. Please try again.");
+          }
+        });
+
+        myVideosList.appendChild(item);
+      });
+    });
+  }
+
+  async function saveVideoBlob(blob, meta = {}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("NOT_SIGNED_IN");
+    if (!userCanSave(user)) throw new Error("EMAIL_NOT_VERIFIED");
+
+    const now = Date.now();
+    const expiresAt = Timestamp.fromDate(new Date(now + 14 * 24 * 60 * 60 * 1000));
+
+    const title = meta.title || `Video - ${new Date(now).toLocaleString()}`;
+    const ext = "webm";
+    const fileName = `${now}_${meta.qKey || "q"}_.${ext}`;
+    const storagePath = `videos/${user.uid}/${fileName}`;
+
+    // 1) upload storage
+    const fileRef = sRef(storage, storagePath);
+    await uploadBytes(fileRef, blob, { contentType: blob.type || "video/webm" });
+
+    // 2) get download URL
+    const downloadURL = await getDownloadURL(fileRef);
+
+    // 3) save metadata
+    await addDoc(userVideosCol(user.uid), {
+      title,
+      storagePath,
+      downloadURL,
+      createdAt: serverTimestamp(),
+      expiresAt,
+      meta: {
+        ...(meta || {}),
+        mime: blob.type || "video/webm",
+        size: blob.size || 0
+      }
+    });
+
+    return downloadURL;
+  }
+
+  // ✅ expose to your main <script>
+  window.getAuthUser = () => auth.currentUser;
+  window.openAuthModal = (msg="") => openAuthModal(msg);
+  window.saveVideoBlob = (blob, meta={}) => saveVideoBlob(blob, meta);
+  window.userCanSave = () => userCanSave(auth.currentUser);
+
+  onAuthStateChanged(auth, (user) => {
+    renderAuthHome(user);
+    startMyVideosListener(user);
+  });
 </script>
+
 
 
 <script>
@@ -863,6 +1165,8 @@ let lastQuestionBankText = "";
 
 // DOM
 const downloadBtn = document.getElementById("downloadBtn");
+const saveBtn = document.getElementById("saveBtn");
+
 const modeSelect = document.getElementById("modeSelect");
 
 const resetSessionBtn = document.getElementById("resetSessionBtn");
@@ -1470,6 +1774,51 @@ downloadBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+  saveBtn.addEventListener("click", async () => {
+  try {
+    if (!lastRecordedBlob) {
+      alert("No video to save yet.");
+      return;
+    }
+
+    // 未登入 → 打開登入視窗（你選 1C，所以 playback 也要能登入）
+    const user = window.getAuthUser?.();
+    if (!user) {
+      window.openAuthModal?.("Please sign in to SAVE your videos.");
+      return;
+    }
+
+    // Email/Password 需要驗證
+    const canSave = window.userCanSave?.();
+    if (!canSave) {
+      window.openAuthModal?.("Please verify your email first, then you can save videos.");
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.style.opacity = "0.6";
+    saveBtn.textContent = "Saving...";
+
+    // 你可以把題目資訊一起存進去
+    const title = `Video - ${new Date().toLocaleString()}`;
+    await window.saveVideoBlob(lastRecordedBlob, {
+      title,
+      qKey: `q_${questionCursor ?? 0}` // 你目前用 questionCursor（隨機/順序）就用它
+    });
+
+    saveBtn.textContent = "Saved ✅";
+    setTimeout(() => (saveBtn.textContent = "SAVE"), 1200);
+  } catch (e) {
+    console.error(e);
+    alert("Save failed. Please try again.");
+    saveBtn.textContent = "SAVE";
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.style.opacity = "1";
+  }
+});
+
+
 resetSessionBtn.addEventListener("click", () => {
   // 重新開始：重建順序 + 指標歸零
   parseQuestions();
@@ -1577,6 +1926,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
