@@ -474,12 +474,55 @@ body.lock-scroll {
   position: fixed;
   width: 100%;
 }
+/* ===== Maintenance Overlay ===== */
+#maintenanceOverlay {
+  position: fixed;
+  inset: 0;
+  background: #9B59B6;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maintenance-card {
+  background: #fff;
+  padding: 28px 32px;
+  border-radius: 18px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+.maintenance-card h1 {
+  margin-bottom: 12px;
+}
+
+.maintenance-card p {
+  margin-top: 8px;
+  line-height: 1.6;
+}
 
     
   </style>
 </head>
 
 <body>
+
+  <!-- ===== Maintenance Mode ===== -->
+<div id="maintenanceOverlay">
+  <div class="maintenance-card">
+    <h1>🚧 Under Maintenance</h1>
+    <p>
+      We’re currently improving the Video Essay Simulator.<br>
+      Please check back shortly.
+    </p>
+    <p class="muted">
+      Thanks for your patience 🙏
+    </p>
+  </div>
+</div>
+
 
 <!-- =======================
      HOME / SETTINGS SCREEN
@@ -782,6 +825,10 @@ Tell us about a time you received tough feedback.</textarea>
 
 
 <script>
+    /* ===== Maintenance Mode Switch ===== */
+  const MAINTENANCE_MODE = true; // true / false 切換
+
+  
 /* =========================================
    Video Essay Simulator (Camera Background + Record + Playback)
    ========================================= */
@@ -1518,11 +1565,18 @@ micToggle.addEventListener("change", async () => {
 
 // 初始
 showHome();
+  
+/* ===== Maintenance Mode Logic ===== */
+if (!MAINTENANCE_MODE) {
+  const overlay = document.getElementById("maintenanceOverlay");
+  if (overlay) overlay.remove();
+}
 
 
 </script>
 </body>
 </html>
+
 
 
 
