@@ -975,26 +975,51 @@ Tell us about a time you received tough feedback.</textarea>
  const authPlaybackLabel = document.getElementById("authPlaybackLabel");
 
 function renderAuthUI(user) {
-  if (authHomeArea) {
-    if (!user) {
-      authHomeArea.innerHTML = `
-        <button class="btn btn-primary" data-action="signin">Sign in</button>
-      `;
-    } else {
-      authHomeArea.innerHTML = `
-        <span class="muted" style="color:#fff; font-weight:900;">
-          User: ${user.email}
-        </span>
-        <button class="btn btn-ghost" data-action="signout">Sign out</button>
-      `;
-    }
+  if (!authHomeArea) return;
+
+  // 🔒 強制讓 auth 區塊「一定看得到」
+  authHomeArea.style.display = "flex";
+  authHomeArea.style.alignItems = "center";
+  authHomeArea.style.gap = "10px";
+  authHomeArea.style.padding = "6px 8px";
+  authHomeArea.style.borderRadius = "12px";
+  authHomeArea.style.background = "rgba(255,255,255,0.20)";
+  authHomeArea.style.border = "1px solid rgba(255,255,255,0.25)";
+
+  if (!user) {
+    authHomeArea.innerHTML = `
+      <button class="btn btn-primary" data-action="signin">
+        Sign in
+      </button>
+    `;
+  } else {
+    const email = user.email || "Signed in";
+    authHomeArea.innerHTML = `
+      <span style="
+        background:#fff;
+        color:#111;
+        padding:6px 10px;
+        border-radius:999px;
+        font-weight:900;
+        max-width:260px;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        white-space:nowrap;
+        display:inline-block;
+      ">👤 ${email}</span>
+
+      <button class="btn btn-danger" data-action="signout">
+        Sign out
+      </button>
+    `;
   }
 
-  // Playback 上顯示使用者（可有可無，但你剛剛說想要）
-  if (authPlaybackLabel) {
+  // （可選）Playback 上顯示使用者
+  if (typeof authPlaybackLabel !== "undefined" && authPlaybackLabel) {
     authPlaybackLabel.textContent = user?.email ? `User: ${user.email}` : "";
   }
 }
+
 
 
   function userCanSave(user) {
@@ -1998,6 +2023,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
