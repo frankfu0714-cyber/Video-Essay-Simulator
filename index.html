@@ -622,10 +622,8 @@ Tell us about a time you received tough feedback.</textarea>
 
 
   </div>
-  <div class="card" style="margin-top:16px;">
-  <h2 style="margin-bottom:10px;">Comments</h2>
-    
-    <div class="card" id="myVideosCard" style="margin-top:16px; display:none;">
+  <!-- ✅ 第二大欄：My Videos（獨立一欄，不塞在 Comments 裡） -->
+<div class="card" id="myVideosCard" style="margin-top:16px; display:none;">
   <div class="row" style="justify-content:space-between; margin-bottom:10px;">
     <h2 style="margin:0;">My Videos</h2>
     <div class="muted" id="myVideosHint">Sign in to see saved videos.</div>
@@ -633,6 +631,9 @@ Tell us about a time you received tough feedback.</textarea>
   <div id="myVideosList"></div>
 </div>
 
+<!-- ✅ 第三大欄：Comments（只放留言，不放 My Videos） -->
+<div class="card" style="margin-top:16px;">
+  <h2 style="margin-bottom:10px;">Comments</h2>
 
   <div class="grid" style="grid-template-columns: 1fr 1fr; align-items:end;">
     <label>
@@ -656,6 +657,7 @@ Tell us about a time you received tough feedback.</textarea>
   <div style="height:14px"></div>
   <div id="commentList"></div>
 </div>
+
 
 </section>
 
@@ -2030,6 +2032,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
