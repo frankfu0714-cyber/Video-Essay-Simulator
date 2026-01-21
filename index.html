@@ -729,8 +729,13 @@ Tell us about a time you received tough feedback.</textarea>
   <div id="playbackScreen">
     <div class="playbackCard">
       <div class="row" style="justify-content:space-between; margin-bottom:10px;">
-        <div style="font-weight:900; font-size:1.1rem;">Playback</div>
-        <div class="row">
+  <div class="row" style="gap:10px; align-items:center;">
+    <div style="font-weight:900; font-size:1.1rem;">Playback</div>
+    <div class="muted" id="authPlaybackLabel" style="font-weight:800;"></div>
+  </div>
+
+  <div class="row">
+
           <button class="btn btn-ghost" id="retakeBtn">Retake</button>
           <button class="btn btn-primary" id="nextBtn">Next Question</button>
           <button class="btn btn-ghost" id="homeBtn">Home</button>
@@ -749,6 +754,7 @@ Tell us about a time you received tough feedback.</textarea>
 </section>
 
 <script type="module">
+  
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 
   import {
@@ -966,25 +972,30 @@ Tell us about a time you received tough feedback.</textarea>
     }
   });
 
-  function renderAuthHome(user) {
-    if (!authHomeArea) return;
+ const authPlaybackLabel = document.getElementById("authPlaybackLabel");
 
+function renderAuthUI(user) {
+  if (authHomeArea) {
     if (!user) {
-      authHomeArea.innerHTML = `<button class="btn btn-primary" id="homeSignInBtn">Sign in</button>`;
-      authHomeArea.querySelector("#homeSignInBtn")?.addEventListener("click", () => openAuthModal());
-      return;
+      authHomeArea.innerHTML = `
+        <button class="btn btn-primary" data-action="signin">Sign in</button>
+      `;
+    } else {
+      authHomeArea.innerHTML = `
+        <span class="muted" style="color:#fff; font-weight:900;">
+          User: ${user.email}
+        </span>
+        <button class="btn btn-ghost" data-action="signout">Sign out</button>
+      `;
     }
-
-    const label = user.email ? user.email : "Signed in";
-    authHomeArea.innerHTML = `
-      <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
-      // <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
-      <button class="btn btn-primary" id="homeSignOutBtn">Sign out</button>
-    `;
-    authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
-      await signOut(auth);
-    });
   }
+
+  // Playback 上顯示使用者（可有可無，但你剛剛說想要）
+  if (authPlaybackLabel) {
+    authPlaybackLabel.textContent = user?.email ? `User: ${user.email}` : "";
+  }
+}
+
 
   function userCanSave(user) {
     if (!user) return false;
@@ -1128,11 +1139,38 @@ Tell us about a time you received tough feedback.</textarea>
   window.openAuthModal = (msg="") => openAuthModal(msg);
   window.saveVideoBlob = (blob, meta={}) => saveVideoBlob(blob, meta);
   window.userCanSave = () => userCanSave(auth.currentUser);
+  
+// ✅✅✅ Step 3 放這裡（一定要在 module 裡、而且只加一次）
+authHomeArea?.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
 
-  onAuthStateChanged(auth, (user) => {
-    renderAuthHome(user);
-    startMyVideosListener(user);
-  });
+  const action = btn.dataset.action;
+  if (!action) return;
+
+  if (action === "signin") {
+    openAuthModal();
+    return;
+  }
+
+  if (action === "signout") {
+    try {
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      await signOut(auth);
+    } catch (err) {
+      console.error("Sign out failed:", err);
+      alert("Sign out failed. Please try again.");
+    } finally {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+  }
+});
+ onAuthStateChanged(auth, (user) => {
+  renderAuthUI(user);
+  startMyVideosListener(user);
+});
 </script>
 
 
@@ -1960,6 +1998,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
