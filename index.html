@@ -1166,32 +1166,39 @@ function renderAuthUI(user) {
   window.userCanSave = () => userCanSave(auth.currentUser);
   
 // ✅✅✅ Step 3 放這裡（一定要在 module 裡、而且只加一次）
-authHomeArea?.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
+const authHomeAreaEl = document.getElementById("authHomeArea");
 
-  const action = btn.dataset.action;
-  if (!action) return;
+if (authHomeAreaEl) {
+  authHomeAreaEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
 
-  if (action === "signin") {
-    openAuthModal();
-    return;
-  }
+    const action = btn.dataset.action;
+    if (!action) return;
 
-  if (action === "signout") {
-    try {
-      btn.disabled = true;
-      btn.style.opacity = "0.6";
-      await signOut(auth);
-    } catch (err) {
-      console.error("Sign out failed:", err);
-      alert("Sign out failed. Please try again.");
-    } finally {
-      btn.disabled = false;
-      btn.style.opacity = "1";
+    if (action === "signin") {
+      openAuthModal();
+      return;
     }
-  }
-});
+
+    if (action === "signout") {
+      try {
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+        await signOut(auth);
+      } catch (err) {
+        console.error("Sign out failed:", err);
+        alert("Sign out failed. Please try again.");
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+      }
+    }
+  });
+} else {
+  console.warn("authHomeArea not found. Check <div id='authHomeArea'></div> exists.");
+}
+
  onAuthStateChanged(auth, (user) => {
   renderAuthUI(user);
   startMyVideosListener(user);
@@ -2023,6 +2030,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
