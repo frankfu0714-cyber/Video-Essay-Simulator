@@ -1073,17 +1073,41 @@ Tell us about a time you received tough feedback.</textarea>
     const fileRef = sRef(storage, storagePath);
 
     await new Promise((resolve, reject) => {
-      const task = uploadBytesResumable(fileRef, blob, { contentType: blob.type || "video/webm" });
-      task.on("state_changed",
-        (snap) => {
-          const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
-          const btn = document.getElementById("saveBtn");
-          if (btn) btn.textContent = `Saving... ${pct}%`;
-        },
-        (err) => reject(err),
-        () => resolve()
-      );
-    });
+  console.log("[SAVE] blob.size =", blob?.size, "type =", blob?.type);
+
+  const task = uploadBytesResumable(
+    fileRef,
+    blob,
+    { contentType: blob.type || "video/webm" }
+  );
+
+  task.on("state_changed",
+    (snap) => {
+      console.log("[UPLOAD]", {
+        state: snap.state,
+        bytesTransferred: snap.bytesTransferred,
+        totalBytes: snap.totalBytes
+      });
+
+      const pct = snap.totalBytes
+        ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+        : 0;
+
+      const btn = document.getElementById("saveBtn");
+      if (btn) btn.textContent = `Saving... ${pct}%`;
+    },
+    (err) => {
+      console.error("[UPLOAD ERROR]", err, "code=", err?.code, "message=", err?.message);
+      // 有些錯誤會藏在 serverResponse
+      if (err?.serverResponse) console.error("[SERVER RESPONSE]", err.serverResponse);
+      reject(err);
+    },
+    () => {
+      console.log("[UPLOAD] completed");
+      resolve();
+    }
+  );
+});
 
     const downloadURL = await getDownloadURL(fileRef);
 
@@ -1936,6 +1960,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
