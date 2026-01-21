@@ -1062,13 +1062,6 @@ function renderAuthUI(user) {
       snap.forEach((d) => {
         const v = d.data();
         const title = (v.title || "Video").replaceAll("<","&lt;");
-        const qTextRaw =
-  v?.meta?.questionText ||
-  v?.meta?.qText ||
-  v?.meta?.qKey ||
-  "";
-        const qText = String(qTextRaw).replaceAll("<","&lt;");
-
         const created = v.createdAt?.toDate ? v.createdAt.toDate().toLocaleString() : "";
         const expires = v.expiresAt?.toDate ? v.expiresAt.toDate().toLocaleDateString() : "";
         const url = v.downloadURL || "";
@@ -1081,19 +1074,11 @@ function renderAuthUI(user) {
             <div class="commentTime">${created}</div>
           </div>
           <div class="muted" style="margin-top:6px;">Expires: ${expires}</div>
-
-${qText ? `
-  <div class="muted" style="margin-top:8px; line-height:1.5;">
-    <b>Question:</b> ${qText}
-  </div>
-` : ``}
-
-<div class="row" style="margin-top:10px;">
-  <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Play</a>
-  <a class="btn btn-ghost" style="background:#eee; color:#111;" href="${url}" download>Download</a>
-  <button class="btn btn-danger" data-del="${d.id}">Delete</button>
-</div>
-
+          <div class="row" style="margin-top:10px;">
+            <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Play</a>
+            <a class="btn btn-ghost" style="background:#eee; color:#111;" href="${url}" download>Download</a>
+            <button class="btn btn-danger" data-del="${d.id}">Delete</button>
+          </div>
         `;
         item.querySelector(`[data-del="${d.id}"]`)?.addEventListener("click", async () => {
           if (!confirm("Delete this saved video?")) return;
@@ -1911,12 +1896,11 @@ downloadBtn.addEventListener("click", () => {
     const title = `Video - ${new Date().toLocaleString()}`;
 
     // ✅ 25 秒超時，避免永遠卡在 Saving...
-    await window.saveVideoBlob(lastRecordedBlob, {
-  title,
-  qKey: `q_${questionCursor ?? 0}`,
-  questionText: (typeof getCurrentQuestion === "function" ? getCurrentQuestion() : (document.getElementById("questionText")?.textContent || ""))
-});
-
+    await withTimeout(
+      window.saveVideoBlob(lastRecordedBlob, {
+        title,
+        qKey: `q_${questionCursor ?? 0}`
+      }),
       25000
     );
 
@@ -2048,8 +2032,6 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
-
-
 
 
 
