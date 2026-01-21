@@ -752,9 +752,14 @@ Tell us about a time you received tough feedback.</textarea>
   // Firebase SDK (modular)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  getStorage,
+  ref as sRef,
+  uploadBytes,
+  uploadBytesResumable,   // ✅ 加這個
+  getDownloadURL,
+  deleteObject
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-storage.js";
+
 
   import {
     getAuth,
@@ -977,25 +982,27 @@ Tell us about a time you received tough feedback.</textarea>
   });
 
   function renderAuthHome(user) {
-    if (!authHomeArea) return;
+  if (!authHomeArea) return;
 
-    if (!user) {
-      authHomeArea.innerHTML = `
-        <button class="btn btn-ghost" id="homeSignInBtn">Sign in (Save)</button>
-      `;
-      authHomeArea.querySelector("#homeSignInBtn")?.addEventListener("click", () => openAuthModal());
-      return;
-    }
-
-    const label = user.email ? user.email : "Signed in";
+  if (!user) {
     authHomeArea.innerHTML = `
-      <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
-      <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
+      <button class="btn btn-primary" id="homeSignInBtn">Sign in</button>
     `;
-    authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
-      await signOut(auth);
-    });
+    authHomeArea.querySelector("#homeSignInBtn")
+      ?.addEventListener("click", () => openAuthModal());
+    return;
   }
+
+  const label = user.email ? user.email : "Signed in";
+  authHomeArea.innerHTML = `
+    <span class="muted" style="color:#fff; font-weight:800;">${label}</span>
+    <button class="btn btn-ghost" id="homeSignOutBtn">Sign out</button>
+  `;
+  authHomeArea.querySelector("#homeSignOutBtn")?.addEventListener("click", async () => {
+    await signOut(auth);
+  });
+}
+
 
   /* =========================
      Save video + My Videos
@@ -1089,9 +1096,24 @@ Tell us about a time you received tough feedback.</textarea>
     const fileName = `${now}_${meta.qKey || "q"}_.${ext}`;
     const storagePath = `videos/${user.uid}/${fileName}`;
 
-    // 1) upload storage
-    const fileRef = sRef(storage, storagePath);
-    await uploadBytes(fileRef, blob, { contentType: blob.type || "video/webm" });
+    // 1) upload storage (resumable + progress)
+const fileRef = sRef(storage, storagePath);
+
+await new Promise((resolve, reject) => {
+  const task = uploadBytesResumable(fileRef, blob, { contentType: blob.type || "video/webm" });
+
+  task.on("state_changed",
+    (snap) => {
+      const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
+      // ✅ 讓 UI 也能顯示進度（可選）
+      const btn = document.getElementById("saveBtn");
+      if (btn) btn.textContent = `Saving... ${pct}%`;
+    },
+    (err) => reject(err),
+    () => resolve()
+  );
+});
+
 
     // 2) get download URL
     const downloadURL = await getDownloadURL(fileRef);
@@ -1774,21 +1796,32 @@ downloadBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+  function withTimeout(promise, ms = 25000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("TIMEOUT")), ms)
+    )
+  ]);
+}
+
   saveBtn.addEventListener("click", async () => {
   try {
     if (!lastRecordedBlob) {
       alert("No video to save yet.");
       return;
     }
+    if (lastRecordedBlob.size === 0) {
+      alert("Recorded video is empty. Please retake.");
+      return;
+    }
 
-    // 未登入 → 打開登入視窗（你選 1C，所以 playback 也要能登入）
     const user = window.getAuthUser?.();
     if (!user) {
       window.openAuthModal?.("Please sign in to SAVE your videos.");
       return;
     }
 
-    // Email/Password 需要驗證
     const canSave = window.userCanSave?.();
     if (!canSave) {
       window.openAuthModal?.("Please verify your email first, then you can save videos.");
@@ -1799,24 +1832,36 @@ downloadBtn.addEventListener("click", () => {
     saveBtn.style.opacity = "0.6";
     saveBtn.textContent = "Saving...";
 
-    // 你可以把題目資訊一起存進去
     const title = `Video - ${new Date().toLocaleString()}`;
-    await window.saveVideoBlob(lastRecordedBlob, {
-      title,
-      qKey: `q_${questionCursor ?? 0}` // 你目前用 questionCursor（隨機/順序）就用它
-    });
+
+    // ✅ 25 秒超時，避免永遠卡在 Saving...
+    await withTimeout(
+      window.saveVideoBlob(lastRecordedBlob, {
+        title,
+        qKey: `q_${questionCursor ?? 0}`
+      }),
+      25000
+    );
 
     saveBtn.textContent = "Saved ✅";
     setTimeout(() => (saveBtn.textContent = "SAVE"), 1200);
+
   } catch (e) {
     console.error(e);
-    alert("Save failed. Please try again.");
+
+    if (String(e?.message || "").includes("TIMEOUT")) {
+      alert("Save timed out. Usually caused by Storage rules/bucket/CORS or network. Please try again.");
+    } else {
+      alert("Save failed. Please try again.");
+    }
+
     saveBtn.textContent = "SAVE";
   } finally {
     saveBtn.disabled = false;
     saveBtn.style.opacity = "1";
   }
 });
+
 
 
 resetSessionBtn.addEventListener("click", () => {
@@ -1926,6 +1971,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
