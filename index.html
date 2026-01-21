@@ -480,10 +480,11 @@ body.lock-scroll {
   inset: 0;
   background: #9B59B6;
   z-index: 9999;
-  display: flex;
+  display: none; /* ✅ 預設不顯示 */
   align-items: center;
   justify-content: center;
 }
+
 
 .maintenance-card {
   background: #fff;
@@ -2034,15 +2035,17 @@ micToggle.addEventListener("change", async () => {
 showHome();
   
 /* ===== Maintenance Mode Logic ===== */
-if (!MAINTENANCE_MODE) {
-  const overlay = document.getElementById("maintenanceOverlay");
-  if (overlay) overlay.remove();
+const overlay = document.getElementById("maintenanceOverlay");
+if (overlay) {
+  overlay.style.display = MAINTENANCE_MODE ? "flex" : "none";
 }
+
 
 
 </script>
 </body>
 </html>
+
 
 
 
