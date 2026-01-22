@@ -607,10 +607,16 @@ body.lock-scroll {
 </div>
 
 <section id="homeScreen">
-  <div class="title">
-    <h1>Video Essay/Interview Simulator</h1>
-    <div class="muted">Start → Countdown → Record → Playback</div>
+  <div class="title" style="position:relative; width:min(960px,100%);">
+  <h1>Video Essay/Interview Simulator</h1>
+  <div class="muted">Start → Countdown → Record → Playback</div>
+
+  <!-- ✅ Stats (Home 右上角) -->
+  <div id="statsBadge" class="pill" style="position:absolute; top:0; right:0;">
+    Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
   </div>
+</div>
+
 
   <div class="card">
     <div class="grid">
@@ -814,10 +820,12 @@ Tell us about a time you received tough feedback.</textarea>
   
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 
-  import {
-    getFirestore, collection, addDoc, serverTimestamp,
-    query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import {
+  getFirestore, collection, addDoc, serverTimestamp,
+  query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp,
+  runTransaction, increment
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
 
   import {
     getAuth,
@@ -852,6 +860,60 @@ Tell us about a time you received tough feedback.</textarea>
   const db = getFirestore(app);
   const auth = getAuth(app);
   const storage = getStorage(app);
+  /* =========================
+   Stats (views + recordings)
+   ========================= */
+const statsRef = doc(db, "stats", "public");
+
+function listenStats() {
+  const vEl = document.getElementById("viewCount");
+  const rEl = document.getElementById("recordCount");
+  if (!vEl || !rEl) return;
+
+  onSnapshot(statsRef, (snap) => {
+    const d = snap.data() || {};
+    vEl.textContent = d.views ?? 0;
+    rEl.textContent = d.recordings ?? 0;
+  });
+}
+
+async function bumpViewOncePerSession() {
+  const key = "ves_viewed";
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(statsRef);
+      if (!snap.exists()) {
+        tx.set(statsRef, { views: 1, recordings: 0 });
+      } else {
+        tx.update(statsRef, { views: increment(1) });
+      }
+    });
+  } catch (e) {
+    console.error("bumpView failed", e);
+  }
+}
+
+async function bumpRecording() {
+  try {
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(statsRef);
+      if (!snap.exists()) {
+        tx.set(statsRef, { views: 0, recordings: 1 });
+      } else {
+        tx.update(statsRef, { recordings: increment(1) });
+      }
+    });
+  } catch (e) {
+    console.error("bumpRecording failed", e);
+  }
+}
+
+// expose 給非-module script 使用（你下面 recorder.onstop 會用到）
+window.bumpRecording = bumpRecording;
+
 
   /* =========================
      Comments (public)
@@ -1264,7 +1326,11 @@ if (authHomeAreaEl) {
  onAuthStateChanged(auth, (user) => {
   renderAuthUI(user);
   startMyVideosListener(user);
+   
 });
+  listenStats();
+bumpViewOncePerSession();
+
 </script>
 
 
@@ -1665,16 +1731,20 @@ function startRecording() {
     if (e.data && e.data.size > 0) recordedChunks.push(e.data);
   };
 
-  recorder.onstop = () => {
+ recorder.onstop = () => {
   lastRecordedBlob = new Blob(
     recordedChunks,
     { type: recorder.mimeType || "video/webm" }
   );
 
+  // ✅ 錄影完成 +1
+  window.bumpRecording?.();
+
   const url = URL.createObjectURL(lastRecordedBlob);
   playbackVideo.src = url;
   showPlayback();
 };
+
 
 
   recorder.start(200);
@@ -2092,6 +2162,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
