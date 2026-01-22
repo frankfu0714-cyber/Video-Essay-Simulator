@@ -557,6 +557,46 @@ body.lock-scroll {
 #homeScreen select option {
   color: #111;
 }
+/* ===== Top row: align stats with personal links ===== */
+.top-row {
+  width: min(960px, 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;   /* ✅ 垂直對齊（中上） */
+  gap: 16px;
+  margin-top: 12px;      /* ✅ 整體往上 */
+}
+
+/* Stats card */
+.stats-card {
+  display: flex;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-weight: 900;
+  align-self: center;    /* ✅ 與個人連結中線對齊 */
+}
+
+.stat-item {
+  white-space: nowrap;
+  font-size: 0.95rem;
+}
+
+/* Mobile：改成直排，避免擠 */
+@media (max-width: 720px) {
+  .top-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .stats-card {
+    margin-top: 6px;
+  }
+}
 
     
   </style>
@@ -583,28 +623,44 @@ body.lock-scroll {
 <!-- =======================
      HOME / SETTINGS SCREEN
      ======================= -->
-     <!-- ===== Personal Links ===== -->
-<div class="personal-links-wrap" id="personalLinks">
-  <div class="card personal-links">
-    <div class="link-icons">
-      <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
-      </a>
+<!-- ===== Top Row: Personal Links + Stats ===== -->
+<div class="top-row">
 
-      <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
-      </a>
+  <!-- ===== Personal Links ===== -->
+  <div class="personal-links-wrap" id="personalLinks">
+    <div class="card personal-links">
+      <div class="link-icons">
+        <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
+        </a>
 
-      <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
-      </a>
-    </div>
+        <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+        </a>
 
-    <div class="muted creator-text">
-      Connect with GoldOtaku
+        <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
+        </a>
+      </div>
+
+      <div class="muted creator-text">
+        Connect with GoldOtaku
+      </div>
     </div>
   </div>
+
+  <!-- ===== Stats (Views / Recordings) ===== -->
+  <div class="stats-card">
+    <div class="stat-item">
+      👀 <span id="viewCount">0</span> Views
+    </div>
+    <div class="stat-item">
+      🎥 <span id="recordCount">0</span> Recordings
+    </div>
+  </div>
+
 </div>
+
 
 <section id="homeScreen">
   <div class="title" style="position:relative; width:min(960px,100%);">
@@ -2162,6 +2218,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
