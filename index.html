@@ -62,28 +62,20 @@
     }
     @media (max-width: 720px){ .grid { grid-template-columns: 1fr; } }
 
-    input, select, textarea {
+   input, select, textarea {
   padding: 10px 12px;
   border-radius: 10px;
-
-  /* ✅ 讓 10、30 這種數字看得到 */
-  color: #fff;
-
-  /* ✅ 深色半透明底，搭配玻璃卡片 */
-  background: rgba(0,0,0,0.35);
-
-  border: 1px solid rgba(255,255,255,0.30);
   font-size: 1rem;
-  outline: none;
-}
 
+  /* ✅ 只改顏色：不動排版 */
+  color: #fff;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.30);
+}
 input::placeholder, textarea::placeholder {
   color: rgba(255,255,255,0.70);
 }
 
-input:focus, select:focus, textarea:focus {
-  border-color: rgba(255,255,255,0.55);
-}
 
     textarea { min-height: 84px; resize: vertical; }
 
@@ -2087,6 +2079,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
