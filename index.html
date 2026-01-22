@@ -610,15 +610,55 @@ body.lock-scroll {
 
 /* 右邊 stats 不在卡裡，但要看起來像同高度 */
 .statsOutside{
-  margin-top: 10px;           /* ✅ 微調高度：你想再上去就改成 6 / 4 / 0 */
-  padding: 12px 14px;         /* 跟你的 btn/pill 風格一致 */
+  margin-top: 0;            /* ✅ 上緣跟卡片上緣齊平 */
+  padding: 12px 14px;
   white-space: nowrap;
 }
+
 
 /* 手機：太擠就自動換行 */
 @media (max-width: 720px){
   .topRow{ flex-direction:column; align-items:center; }
   .statsOutside{ margin-top: 0; }
+}
+/* ✅ Top row aligns with big cards width */
+.homeTopRow{
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* 左空、 中置中、右置右 */
+  align-items: start;
+  margin-top: 16px;
+}
+
+/* 置中個人連結 */
+.homeTopRow #personalLinks{
+  grid-column: 2;
+  justify-self: center;
+  margin-top: 0; /* 你剛剛調好的高度就別用負數 */
+}
+
+/* 右側 stats 對齊右邊緣 */
+.homeTopRow .homeTopStats{
+  grid-column: 3;
+  justify-self: end;
+  align-self: start;
+}
+
+/* stats 上緣齊平 */
+#statsBadge{
+  margin-top: 0;
+}
+
+/* ✅ 手機：改成上下堆疊（先 personal，再 stats） */
+@media (max-width: 720px){
+  .homeTopRow{
+    grid-template-columns: 1fr;
+    gap: 10px;
+    justify-items: center;
+  }
+  .homeTopRow .homeTopStats{
+    justify-self: center;
+  }
 }
 
     
@@ -681,6 +721,37 @@ body.lock-scroll {
 
 
 <section id="homeScreen">
+  <!-- ✅ Top row: center personal card + right stats (same width as big cards) -->
+<div class="homeTopRow">
+  <div></div>
+
+  <!-- ✅ Personal Links (置中) -->
+  <div class="personal-links-wrap" id="personalLinks">
+    <div class="card personal-links">
+      <div class="link-icons">
+        <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
+        </a>
+
+        <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+        </a>
+
+        <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
+        </a>
+      </div>
+
+      <div class="muted creator-text">
+        Connect with GoldOtaku
+      </div>
+    </div>
+  </div>
+
+
+  </div>
+</div>
+
   <div class="title" style="position:relative; width:min(960px,100%);">
   <h1>Video Essay/Interview Simulator</h1>
   <div class="muted">Start → Countdown → Record → Playback</div>
@@ -2233,6 +2304,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
