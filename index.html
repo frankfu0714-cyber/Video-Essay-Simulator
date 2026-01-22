@@ -7,8 +7,14 @@
   <style>
     * { box-sizing: border-box; margin:0; padding:0; }
     body {
+  body {
   font-family: "Microsoft JhengHei", system-ui, sans-serif;
-  color:#111;
+  color: #fff; /* ✅ 全站字體白色 */
+
+  /* 你目前的背景（或你剛換的漸層背景） */
+  background:#9B59B6;
+}
+
 
   /* ✅ 紫色漸層 + 光暈（像你圖那種） */
   background:
@@ -62,13 +68,25 @@
     }
     @media (max-width: 720px){ .grid { grid-template-columns: 1fr; } }
 
-    label { display:flex; flex-direction:column; gap:6px; font-weight:700; }
-    input, select, textarea {
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      font-size: 1rem;
-    }
+input, select, textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+
+  /* ✅ 白字 */
+  color: #fff;
+
+  /* 半透明深色底，白字才看得清楚 */
+  background: rgba(255,255,255,0.12);
+
+  border: 1px solid rgba(255,255,255,0.35);
+  font-size: 1rem;
+}
+    input::placeholder,
+textarea::placeholder {
+  color: rgba(255,255,255,0.75);
+}
+
+
     textarea { min-height: 84px; resize: vertical; }
 
     /* ===== Record Screen ===== */
@@ -2053,6 +2071,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
