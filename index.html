@@ -570,6 +570,28 @@ body.lock-scroll {
   font-size: 0.85rem;
   white-space: nowrap;
 }
+.personal-links-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.personal-left{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.creator-text{
+  margin:0;
+  font-size:0.9rem;
+  white-space:nowrap;
+}
+
+.stats-pill{
+  white-space:nowrap;
+}
 
     
   </style>
@@ -600,30 +622,33 @@ body.lock-scroll {
 <div class="personal-links-wrap" id="personalLinks">
   <div class="card personal-links personal-links-row">
 
-    <!-- 左：社群 icon -->
-    <div class="link-icons">
-      <a href="https://www.linkedin.com/in/goldotaku" target="_blank">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg">
-      </a>
-      <a href="https://youtube.com/@goldotaku403" target="_blank">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg">
-      </a>
-      <a href="https://linktr.ee/goldotaku" target="_blank">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg">
-      </a>
+    <!-- 左側：icons + 文字 -->
+    <div class="personal-left">
+      <div class="link-icons">
+        <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
+        </a>
+
+        <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+        </a>
+
+        <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
+          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
+        </a>
+      </div>
+
+      <div class="muted creator-text">Connect with GoldOtaku</div>
     </div>
 
-    <!-- 右：Views / Records -->
+    <!-- 右側：Stats -->
     <div id="statsBadge" class="pill stats-pill">
       Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
     </div>
 
   </div>
-
-  <div class="muted creator-text">
-    Connect with GoldOtaku
-  </div>
 </div>
+
 
 
 <section id="homeScreen">
@@ -631,10 +656,7 @@ body.lock-scroll {
   <h1>Video Essay/Interview Simulator</h1>
   <div class="muted">Start → Countdown → Record → Playback</div>
 
-  <!-- ✅ Stats (Home 右上角) -->
-  <div id="statsBadge" class="pill" style="position:absolute; top:0; right:0;">
-    Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
-  </div>
+
 </div>
 
 
@@ -2182,6 +2204,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
