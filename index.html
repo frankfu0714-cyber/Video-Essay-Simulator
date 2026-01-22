@@ -557,13 +557,7 @@ body.lock-scroll {
 #homeScreen select option {
   color: #111;
 }
-/* 讓個人連結那一條變成「左右排列」 */
-.personal-links-row {
-  display: flex;
-  align-items: center;        /* ✅ 上緣/中線自然對齊 */
-  justify-content: space-between;
-  gap: 16px;
-}
+
 
 /* Stats 不要太大 */
 .stats-pill {
@@ -577,11 +571,6 @@ body.lock-scroll {
   gap:16px;
 }
 
-.personal-left{
-  display:flex;
-  align-items:center;
-  gap:14px;
-}
 
 .creator-text{
   margin:0;
@@ -589,9 +578,7 @@ body.lock-scroll {
   white-space:nowrap;
 }
 
-.stats-pill{
-  white-space:nowrap;
-}
+
 /* 這一排：左卡 + 右 stats */
 .personal-links-wrap{
   display:flex;
@@ -599,28 +586,7 @@ body.lock-scroll {
   margin-top:16px;
 }
 
-/* 讓左邊卡跟右邊 stats 同一行、同高度 */
-.topRow{
-  width: min(960px, 100%);
-  display:flex;
-  align-items:flex-start;     /* ✅ 同一個上緣 */
-  justify-content:center;
-  gap:16px;
-}
 
-/* 右邊 stats 不在卡裡，但要看起來像同高度 */
-.statsOutside{
-  margin-top: 0;            /* ✅ 上緣跟卡片上緣齊平 */
-  padding: 12px 14px;
-  white-space: nowrap;
-}
-
-
-/* 手機：太擠就自動換行 */
-@media (max-width: 720px){
-  .topRow{ flex-direction:column; align-items:center; }
-  .statsOutside{ margin-top: 0; }
-}
 /* ✅ Top row aligns with big cards width */
 .homeTopRow{
   width: min(960px, 100%);
@@ -687,41 +653,14 @@ body.lock-scroll {
      HOME / SETTINGS SCREEN
      ======================= -->
      <!-- ===== Personal Links ===== -->
-<div class="personal-links-wrap" id="personalLinks">
-  <div class="topRow">
 
-    <!-- 左：個人連結卡（維持原本：icons 上、文字下） -->
-    <div class="card personal-links">
-      <div class="link-icons">
-        <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
-          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
-        </a>
-
-        <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
-          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
-        </a>
-
-        <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
-          <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
-        </a>
-      </div>
-
-      <div class="muted creator-text">Connect with GoldOtaku</div>
-    </div>
-
-    <!-- 右：Stats（在框框外、但同高對齊） -->
-    <div id="statsBadge" class="pill statsOutside">
-      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
-    </div>
-
-  </div>
-</div>
 
 
 
 
 <section id="homeScreen">
   <!-- ✅ Top row: center personal card + right stats (same width as big cards) -->
+<!-- ✅ Top row: center personal card + right stats -->
 <div class="homeTopRow">
   <div></div>
 
@@ -732,25 +671,25 @@ body.lock-scroll {
         <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
           <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
         </a>
-
         <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
           <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
         </a>
-
         <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
           <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
         </a>
       </div>
-
-      <div class="muted creator-text">
-        Connect with GoldOtaku
-      </div>
+      <div class="muted creator-text">Connect with GoldOtaku</div>
     </div>
   </div>
 
-
+  <!-- ✅ Stats (致右、在卡片外、同上緣) -->
+  <div class="homeTopStats">
+    <div id="statsBadge" class="pill">
+      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
+    </div>
   </div>
 </div>
+
 
   <div class="title" style="position:relative; width:min(960px,100%);">
   <h1>Video Essay/Interview Simulator</h1>
@@ -2304,6 +2243,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
