@@ -518,33 +518,44 @@ body.lock-scroll {
   margin-top: 8px;
   line-height: 1.6;
 }
-/* ✅ Only affect HOME screen text (incl. My Videos + Comments) */
-#homeScreen,
-#homeScreen * {
+/* ✅ HOME: 只把一般文字變白（不影響 input/select/textarea 裡的字） */
+#homeScreen { color: #fff; }
+
+/* 讓 HOME 裡的標題、label、提示、內容都跟著變白 */
+#homeScreen h1,
+#homeScreen h2,
+#homeScreen label,
+#homeScreen .muted,
+#homeScreen #homeHint,
+#homeScreen #commentStatus,
+#homeScreen #myVideosHint,
+#homeScreen #commentList,
+#homeScreen #myVideosList,
+#homeScreen .commentItem,
+#homeScreen .commentMeta,
+#homeScreen .commentTime,
+#homeScreen .commentBody {
   color: #fff;
 }
 
-/* ✅ Keep inputs/select/textarea text visible on glass card (still in HOME only) */
+/* ✅ 重要：白底框框維持「白底 + 黑字」(不更動排版) */
 #homeScreen input,
 #homeScreen select,
 #homeScreen textarea {
-  color: #fff;
+  background: #fff;
+  color: #111;
+  border: 1px solid #ddd;
 }
 
-/* ✅ Placeholder text (e.g. comment input hints) */
+/* placeholder 也要黑灰色，才看得到 */
 #homeScreen input::placeholder,
 #homeScreen textarea::placeholder {
-  color: rgba(255,255,255,0.75);
+  color: #666;
 }
 
-/* ✅ Select dropdown options (some browsers need this) */
+/* 下拉選單的 option 也維持黑字 */
 #homeScreen select option {
-  color: #111; /* 下拉選單展開通常是白底，黑字才看得到 */
-}
-
-/* ✅ Make "Tip..." also white (it is in #homeScreen already, but for safety) */
-#homeHint {
-  color: rgba(255,255,255,0.85);
+  color: #111;
 }
 
     
@@ -2081,6 +2092,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
