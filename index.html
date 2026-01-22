@@ -592,6 +592,34 @@ body.lock-scroll {
 .stats-pill{
   white-space:nowrap;
 }
+/* 這一排：左卡 + 右 stats */
+.personal-links-wrap{
+  display:flex;
+  justify-content:center;
+  margin-top:16px;
+}
+
+/* 讓左邊卡跟右邊 stats 同一行、同高度 */
+.topRow{
+  width: min(960px, 100%);
+  display:flex;
+  align-items:flex-start;     /* ✅ 同一個上緣 */
+  justify-content:center;
+  gap:16px;
+}
+
+/* 右邊 stats 不在卡裡，但要看起來像同高度 */
+.statsOutside{
+  margin-top: 10px;           /* ✅ 微調高度：你想再上去就改成 6 / 4 / 0 */
+  padding: 12px 14px;         /* 跟你的 btn/pill 風格一致 */
+  white-space: nowrap;
+}
+
+/* 手機：太擠就自動換行 */
+@media (max-width: 720px){
+  .topRow{ flex-direction:column; align-items:center; }
+  .statsOutside{ margin-top: 0; }
+}
 
     
   </style>
@@ -620,10 +648,10 @@ body.lock-scroll {
      ======================= -->
      <!-- ===== Personal Links ===== -->
 <div class="personal-links-wrap" id="personalLinks">
-  <div class="card personal-links personal-links-row">
+  <div class="topRow">
 
-    <!-- 左側：icons + 文字 -->
-    <div class="personal-left">
+    <!-- 左：個人連結卡（維持原本：icons 上、文字下） -->
+    <div class="card personal-links">
       <div class="link-icons">
         <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
           <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
@@ -641,13 +669,14 @@ body.lock-scroll {
       <div class="muted creator-text">Connect with GoldOtaku</div>
     </div>
 
-    <!-- 右側：Stats -->
-    <div id="statsBadge" class="pill stats-pill">
+    <!-- 右：Stats（在框框外、但同高對齊） -->
+    <div id="statsBadge" class="pill statsOutside">
       Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
     </div>
 
   </div>
 </div>
+
 
 
 
@@ -2204,6 +2233,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
