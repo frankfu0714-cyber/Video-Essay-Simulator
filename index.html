@@ -62,21 +62,13 @@
     }
     @media (max-width: 720px){ .grid { grid-template-columns: 1fr; } }
 
-   input, select, textarea {
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 1rem;
-
-  /* ✅ 只改顏色：不動排版 */
-  color: #fff;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.30);
-}
-input::placeholder, textarea::placeholder {
-  color: rgba(255,255,255,0.70);
-}
-
-
+    label { display:flex; flex-direction:column; gap:6px; font-weight:700; }
+    input, select, textarea {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+    }
     textarea { min-height: 84px; resize: vertical; }
 
     /* ===== Record Screen ===== */
@@ -87,24 +79,6 @@ input::placeholder, textarea::placeholder {
       overflow: hidden;
       background:#000;
     }
-    
-    /* ===== Force UI text to white ===== */
-label,
-label *,
-h1, h2, h3,
-.title,
-.muted,
-#homeScreen,
-#homeScreen *,
-#myVideosCard,
-#myVideosCard *,
-.commentItem,
-.commentItem *,
-.commentMeta,
-.commentBody {
-  color: #fff !important;
-}
-
 
     /* Camera background video */
     #cameraBg {
@@ -2079,10 +2053,6 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
-
-
-
-
 
 
 
