@@ -557,6 +557,19 @@ body.lock-scroll {
 #homeScreen select option {
   color: #111;
 }
+/* 讓個人連結那一條變成「左右排列」 */
+.personal-links-row {
+  display: flex;
+  align-items: center;        /* ✅ 上緣/中線自然對齊 */
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Stats 不要太大 */
+.stats-pill {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
 
     
   </style>
@@ -585,26 +598,33 @@ body.lock-scroll {
      ======================= -->
      <!-- ===== Personal Links ===== -->
 <div class="personal-links-wrap" id="personalLinks">
-  <div class="card personal-links">
+  <div class="card personal-links personal-links-row">
+
+    <!-- 左：社群 icon -->
     <div class="link-icons">
-      <a href="https://www.linkedin.com/in/goldotaku" target="_blank" aria-label="LinkedIn">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg" alt="LinkedIn">
+      <a href="https://www.linkedin.com/in/goldotaku" target="_blank">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linkedin.svg">
       </a>
-
-      <a href="https://youtube.com/@goldotaku403" target="_blank" aria-label="YouTube">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" alt="YouTube">
+      <a href="https://youtube.com/@goldotaku403" target="_blank">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg">
       </a>
-
-      <a href="https://linktr.ee/goldotaku" target="_blank" aria-label="Linktree">
-        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg" alt="Linktree">
+      <a href="https://linktr.ee/goldotaku" target="_blank">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/linktree.svg">
       </a>
     </div>
 
-    <div class="muted creator-text">
-      Connect with GoldOtaku
+    <!-- 右：Views / Records -->
+    <div id="statsBadge" class="pill stats-pill">
+      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
     </div>
+
+  </div>
+
+  <div class="muted creator-text">
+    Connect with GoldOtaku
   </div>
 </div>
+
 
 <section id="homeScreen">
   <div class="title" style="position:relative; width:min(960px,100%);">
@@ -2162,6 +2182,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
