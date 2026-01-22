@@ -518,6 +518,34 @@ body.lock-scroll {
   margin-top: 8px;
   line-height: 1.6;
 }
+/* ✅ Only affect HOME screen text (incl. My Videos + Comments) */
+#homeScreen,
+#homeScreen * {
+  color: #fff;
+}
+
+/* ✅ Keep inputs/select/textarea text visible on glass card (still in HOME only) */
+#homeScreen input,
+#homeScreen select,
+#homeScreen textarea {
+  color: #fff;
+}
+
+/* ✅ Placeholder text (e.g. comment input hints) */
+#homeScreen input::placeholder,
+#homeScreen textarea::placeholder {
+  color: rgba(255,255,255,0.75);
+}
+
+/* ✅ Select dropdown options (some browsers need this) */
+#homeScreen select option {
+  color: #111; /* 下拉選單展開通常是白底，黑字才看得到 */
+}
+
+/* ✅ Make "Tip..." also white (it is in #homeScreen already, but for safety) */
+#homeHint {
+  color: rgba(255,255,255,0.85);
+}
 
     
   </style>
@@ -2053,6 +2081,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
