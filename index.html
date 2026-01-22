@@ -941,7 +941,10 @@ Tell us about a time you received tough feedback.</textarea>
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
       await sendEmailVerification(cred.user);
-      authMsg.textContent = "Account created ✅ Verification email sent. Please verify then sign in.";
+      authMsg.textContent =
+  "Account created ✅ Verification email sent. Please verify then sign in. " +
+  "If you don’t see it, please check your Spam/Junk or Trash folder.";
+
     } catch (e) {
       console.error(e);
       authMsg.textContent = e?.message || "Sign up failed.";
@@ -967,7 +970,9 @@ Tell us about a time you received tough feedback.</textarea>
     if (!user) return authMsg.textContent = "Please sign in first.";
     try {
       await sendEmailVerification(user);
-      authMsg.textContent = "Verification email sent ✅";
+      authMsg.textContent =
+  "Verification email sent ✅ If you don’t see it, please check your Spam/Junk or Trash folder.";
+
     } catch (e) {
       console.error(e);
       authMsg.textContent = "Failed to send verification email.";
@@ -2032,6 +2037,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
