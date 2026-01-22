@@ -6,7 +6,19 @@
   <title>Video Essay/Interview Simulator</title>
   <style>
     * { box-sizing: border-box; margin:0; padding:0; }
-    body { font-family: "Microsoft JhengHei", system-ui, sans-serif; background:#9B59B6; color:#111; }
+    body {
+  font-family: "Microsoft JhengHei", system-ui, sans-serif;
+  color:#111;
+
+  /* ✅ 紫色漸層 + 光暈（像你圖那種） */
+  background:
+    radial-gradient(900px 600px at 30% 20%, rgba(255,255,255,0.18), transparent 60%),
+    radial-gradient(700px 500px at 70% 35%, rgba(255,255,255,0.10), transparent 65%),
+    linear-gradient(135deg, #4a1b7a 0%, #6b2bbf 40%, #8a3fd6 100%);
+
+  background-attachment: fixed;
+}
+
 
     /* ===== Shared ===== */
     .btn {
@@ -33,12 +45,16 @@
     .title { text-align:center; color:#fff; }
     .title h1 { font-size: 2.2rem; }
     .card {
-      width: min(960px, 100%);
-      background: #fff;
-      border-radius: 14px;
-      padding: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-    }
+  width: min(960px, 100%);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+}
+
     .grid {
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -2037,6 +2053,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
