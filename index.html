@@ -1506,6 +1506,23 @@ const retakeBtn = document.getElementById("retakeBtn");
 const nextBtn = document.getElementById("nextBtn");
 
 /* ---------- Utilities ---------- */
+  function sanitizeTitleText(text) {
+  // 給 Firestore title 用：去掉換行、縮短、避免太長
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+}
+
+function sanitizeFileName(text) {
+  // 給 download 檔名用：移除 Windows/macOS 不合法字元
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[\/\\:\*\?"<>\|]+/g, "-")
+    .slice(0, 60);
+}
+
 function lockStartUI() {
   goStart.disabled = true;
   goStart.style.opacity = "0.55";
@@ -2057,7 +2074,8 @@ downloadBtn.addEventListener("click", () => {
   a.href = url;
 
   // 檔名：video-essay-q1.webm 這種
-  a.download = `video-essay-q${questionCursor + 1}.webm`;
+  const qName = sanitizeFileName(getCurrentQuestion());
+a.download = `video-essay-q${questionCursor + 1}-${qName}.webm`;
 
 
   document.body.appendChild(a);
@@ -2103,8 +2121,10 @@ downloadBtn.addEventListener("click", () => {
     saveBtn.disabled = true;
     saveBtn.style.opacity = "0.6";
     saveBtn.textContent = "Saving...";
+    
+const qText = sanitizeTitleText(getCurrentQuestion());
+const title = `Q${questionCursor + 1} - ${qText} | ${new Date().toLocaleString()}`;
 
-    const title = `Video - ${new Date().toLocaleString()}`;
 
     // ✅ 25 秒超時，避免永遠卡在 Saving...
     await withTimeout(
@@ -2243,6 +2263,7 @@ if (!MAINTENANCE_MODE) {
 </script>
 </body>
 </html>
+
 
 
 
