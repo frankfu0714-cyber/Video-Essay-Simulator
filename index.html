@@ -274,38 +274,6 @@
 }
 
 /* ===== Personal Links ===== */
-.personal-links {
-  text-align: center;
-}
-
-.link-icons {
-  display: flex;
-  justify-content: center;
-  gap: 26px;
-}
-
-.link-icons a {
-  width: 42px;
-  height: 42px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #f3f3f3;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.link-icons a:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
-}
-
-.link-icons img {
-  width: 22px;
-  height: 22px;
-  filter: invert(0.15);
-}
-/* ===== Personal Links (Centered & Compact) ===== */
 .personal-links-wrap {
   display: flex;
   justify-content: center;
@@ -1824,7 +1792,7 @@ function pickMimeType() {
 
 function startRecording() {
   if (!mediaStream) {
-    alert("目前 Cam/Mic 都關閉，無法錄影錄音。至少開啟其中一個。");
+    alert("Camera and Microphone are both off. Please enable at least one to record.");
     return;
   }
 
@@ -1955,11 +1923,11 @@ if ((practiceMode === "sequential_once" || practiceMode === "random_once") && ha
   const recordSeconds = parseInt(recordTimeInput.value);
 
   if (!Number.isFinite(prepSeconds) || prepSeconds < 0) {
-    alert("Prep time 請輸入 0 以上秒數");
+    alert("Please enter a valid Prep time (0 or more seconds).");
     return;
   }
   if (!Number.isFinite(recordSeconds) || recordSeconds < 1) {
-    alert("Record time 請輸入 1 以上秒數");
+    alert("Please enter a valid Record time (1 or more seconds).");
     return;
   }
 
@@ -1996,7 +1964,7 @@ await speakQuestion(getCurrentQuestion());
   try {
     await startStream();
   } catch (e) {
-    alert("無法開啟攝像頭/麥克風。請確認權限或裝置是否可用。");
+    alert("Could not access camera/microphone. Please check your permissions and device availability.");
   }
 
   // ✅ 最後才開始 Prep 倒數（最後三秒大 countdown）
@@ -2245,7 +2213,7 @@ micToggle.addEventListener("change", async () => {
 // 進入頁面先要權限（可讓裝置列表顯示名稱）
 (async function init() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("此瀏覽器不支援攝像頭/麥克風 API。請用最新版 Chrome/Edge。");
+    alert("Your browser does not support camera/microphone access. Please use the latest version of Chrome or Edge.");
     return;
   }
   await ensurePermissions();
