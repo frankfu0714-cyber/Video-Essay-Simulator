@@ -2311,7 +2311,7 @@ micToggle.addEventListener("change", async () => {
 // 進入頁面先要權限（可讓裝置列表顯示名稱）
 (async function init() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Your browser does not support camera/microphone access. Please use the latest version of Chrome or Edge.");
+    console.warn("[init] navigator.mediaDevices.getUserMedia unavailable; skipping device prefetch. Recording attempts will surface a contextual error.");
     return;
   }
   await ensurePermissions();
