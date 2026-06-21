@@ -1,8 +1,0 @@
-node_modules/
-package-lock.json
-.firebase/
-firebase-debug.log
-firebase-debug.*.log
-*.local
-.env
-.env.local
