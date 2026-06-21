@@ -5,38 +5,22 @@ Live: https://frankfu0714-cyber.github.io/Video-Essay-Simulator/
 ## Structure
 
 - `index.html` — the entire app (static, deployed to GitHub Pages). Uses Firebase Auth, Firestore, and Storage.
-- `functions/` — Firebase Cloud Functions (Node 20). Runs the orphan-storage cleanup on Firestore doc deletion.
-- `firebase.json`, `.firebaserc` — Firebase project config (project ID: `video-essay-simulator`).
+- `.firebaserc` — pins the Firebase project ID (`video-essay-simulator`) for any future CLI work. Not required at runtime.
 
-## Saved-video expiration (three layers)
+## Saved-video expiration (client-side sweep)
 
-Videos are saved with `expiresAt = createdAt + 14 days`. Expired videos are removed by three independent layers, so failure of any one does not leak storage:
+Videos are saved with `expiresAt = createdAt + 14 days`. Cleanup runs entirely in the client (`cleanupExpiredVideos` in `index.html`):
 
-1. **Client-side sweep** (`cleanupExpiredVideos` in `index.html`). When a signed-in user opens the page, expired docs are filtered out of the render and deleted from Firestore + Storage. Covers active users; does nothing for accounts that never come back.
-2. **Firestore TTL policy** on the `expiresAt` field — see setup below. Deletes the Firestore doc within ~24h of expiration, regardless of whether the user opens the page.
-3. **`onVideoDocDelete` Cloud Function** (`functions/index.js`). Triggered by any Firestore doc deletion (manual button, client sweep, or TTL); deletes the matching Storage blob. This is what closes the loop on the TTL path — Firestore TTL deletes the doc but not the Storage file.
+- The Firestore listener splits each snapshot into `liveDocs` and `expiredDocs` by comparing `expiresAt` to `Date.now()`.
+- Expired docs are filtered out of the render and deleted from Firebase Storage (`deleteObject`) and Firestore (`deleteDoc`).
+- A `pendingExpiredDeletes` set deduplicates in-flight deletes across rapid snapshot refires.
+- Storage 404s are tolerated — if the blob is already gone, the Firestore doc is still removed so it doesn't get stuck.
+- Other transient failures unblock themselves so the next snapshot retries.
 
-## Deploying the Cloud Function
+### Limitation
 
-Cloud Functions require the **Blaze (pay-as-you-go) plan** — the free Spark plan cannot deploy functions. Upgrade at https://console.firebase.google.com/project/video-essay-simulator/usage/details if needed. For this workload (one trigger per video deletion), expected cost is a few cents per month.
+Expired videos are cleaned up the next time the owner signs in and opens the page. If a user abandons their account, their expired blobs will remain in Firebase Storage indefinitely. Trade-off accepted to stay on the free Spark plan — the alternative (Firestore TTL + a Cloud Function to sweep Storage) requires upgrading to Blaze.
 
-```sh
-cd /Users/frank/Video-Essay-Simulator/functions
-npm install
-cd ..
-firebase deploy --only functions
-```
+## Deploying
 
-Logs: `firebase functions:log` (or `cd functions && npm run logs`).
-
-## Setting up the Firestore TTL policy
-
-TTL is a server-side feature configured in the Firebase Console (not in code).
-
-1. Open https://console.firebase.google.com/project/video-essay-simulator/firestore/ttl
-2. Click **Create policy**.
-3. **Collection group**: `videos` (the path is `users/{uid}/videos`, a subcollection — Firestore TTL operates on the collection-group ID, which is `videos`).
-4. **Timestamp field**: `expiresAt`.
-5. Save. Initial policy build can take up to 24h; after that, docs are deleted within ~24h of their `expiresAt`.
-
-Once the TTL policy is active and the Cloud Function is deployed, expired videos are cleaned up end-to-end with no client involvement.
+GitHub Pages auto-publishes on push to `main` — no build step. Just push.

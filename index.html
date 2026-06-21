@@ -1223,7 +1223,15 @@ function renderAuthUI(user) {
       pendingExpiredDeletes.add(d.id);
       try {
         if (v.storagePath) {
-          await deleteObject(sRef(storage, v.storagePath));
+          try {
+            await deleteObject(sRef(storage, v.storagePath));
+          } catch (storageErr) {
+            if (storageErr?.code === "storage/object-not-found") {
+              console.log(`[CLEANUP] Storage blob ${v.storagePath} already gone; deleting doc anyway.`);
+            } else {
+              throw storageErr;
+            }
+          }
         }
         await deleteDoc(doc(db, "users", uid, "videos", d.id));
         console.log(`[CLEANUP] Deleted expired video ${d.id} (expiresAt=${new Date(expMs).toISOString()})`);
