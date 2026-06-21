@@ -1211,6 +1211,10 @@ function renderAuthUI(user) {
     return collection(db, "users", uid, "videos");
   }
 
+  const MAX_VIDEOS = 10;
+  const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
+  let currentLiveVideoCount = 0;
+
   const pendingExpiredDeletes = new Set();
 
   async function cleanupExpiredVideos(uid, docs) {
@@ -1254,6 +1258,7 @@ function renderAuthUI(user) {
       myVideosCard.style.display = "none";
       myVideosList.innerHTML = "";
       myVideosHint.textContent = "Sign in to see saved videos.";
+      currentLiveVideoCount = 0;
       return;
     }
 
@@ -1264,6 +1269,8 @@ function renderAuthUI(user) {
       myVideosList.innerHTML = "";
 
       if (snap.empty) {
+        currentLiveVideoCount = 0;
+        myVideosHint.textContent = `0 / ${MAX_VIDEOS} videos used`;
         myVideosList.innerHTML = `<div class="muted">No saved videos yet.</div>`;
         return;
       }
@@ -1285,17 +1292,32 @@ function renderAuthUI(user) {
         cleanupExpiredVideos(user.uid, expiredDocs);
       }
 
+      currentLiveVideoCount = liveDocs.length;
+      myVideosHint.textContent = `${liveDocs.length} / ${MAX_VIDEOS} videos used`;
+
       if (liveDocs.length === 0) {
         myVideosList.innerHTML = `<div class="muted">No saved videos yet.</div>`;
         return;
       }
 
+      const DAY_MS = 24 * 60 * 60 * 1000;
       liveDocs.forEach((d) => {
         const v = d.data();
         const title = (v.title || "Video").replaceAll("<","&lt;");
         const created = v.createdAt?.toDate ? v.createdAt.toDate().toLocaleString() : "";
-        const expires = v.expiresAt?.toDate ? v.expiresAt.toDate().toLocaleDateString() : "";
+        const expMs = v.expiresAt?.toDate ? v.expiresAt.toDate().getTime() : null;
         const url = v.downloadURL || "";
+
+        let expiresBadge = "";
+        if (expMs !== null) {
+          const daysLeft = Math.ceil((expMs - nowMs) / DAY_MS);
+          let color, label;
+          if (daysLeft > 3) { color = "#1a7f37"; label = `Expires in ${daysLeft} days`; }
+          else if (daysLeft >= 2) { color = "#bf8700"; label = `Expires in ${daysLeft} days`; }
+          else if (daysLeft === 1) { color = "#bf8700"; label = "Expires in 1 day"; }
+          else { color = "#cf222e"; label = "Expires today"; }
+          expiresBadge = `<span style="color:${color}; font-weight:700;">${label}</span>`;
+        }
 
         const item = document.createElement("div");
         item.className = "commentItem";
@@ -1304,7 +1326,7 @@ function renderAuthUI(user) {
             <div style="font-weight:900;">${title}</div>
             <div class="commentTime">${created}</div>
           </div>
-          <div class="muted" style="margin-top:6px;">Expires: ${expires}</div>
+          <div class="muted" style="margin-top:6px;">${expiresBadge}</div>
           <div class="row" style="margin-top:10px;">
             <a class="btn btn-primary" href="${url}" target="_blank" rel="noopener">Play</a>
             <a class="btn btn-ghost" style="background:#eee; color:#111;" href="${url}" download>Download</a>
@@ -1333,7 +1355,7 @@ function renderAuthUI(user) {
     if (!userCanSave(user)) throw new Error("EMAIL_NOT_VERIFIED");
 
     const now = Date.now();
-    const expiresAt = Timestamp.fromDate(new Date(now + 14 * 24 * 60 * 60 * 1000));
+    const expiresAt = Timestamp.fromDate(new Date(now + 7 * 24 * 60 * 60 * 1000));
 
     const title = meta.title || `Video - ${new Date(now).toLocaleString()}`;
     const fileName = `${now}_${meta.qKey || "q"}_.webm`;
@@ -1397,6 +1419,9 @@ function renderAuthUI(user) {
   window.openAuthModal = (msg="") => openAuthModal(msg);
   window.saveVideoBlob = (blob, meta={}) => saveVideoBlob(blob, meta);
   window.userCanSave = () => userCanSave(auth.currentUser);
+  window.getActiveVideoCount = () => currentLiveVideoCount;
+  window.MAX_VIDEOS = MAX_VIDEOS;
+  window.MAX_VIDEO_BYTES = MAX_VIDEO_BYTES;
   
 // ✅✅✅ Step 3 放這裡（一定要在 module 裡、而且只加一次）
 const authHomeAreaEl = document.getElementById("authHomeArea");
@@ -2134,6 +2159,16 @@ a.download = `video-essay-q${questionCursor + 1}-${qName}.webm`;
       return;
     }
 
+    const maxBytes = window.MAX_VIDEO_BYTES ?? (30 * 1024 * 1024);
+    if (lastRecordedBlob.size > maxBytes) {
+      const mb = (lastRecordedBlob.size / (1024 * 1024)).toFixed(1);
+      alert(
+        `Video is too large: ${mb} MB (max 30 MB). Please re-record a shorter clip.\n` +
+        `影片過大：${mb} MB（上限 30 MB），請重新錄製較短的影片。`
+      );
+      return;
+    }
+
     const user = window.getAuthUser?.();
     if (!user) {
       window.openAuthModal?.("Please sign in to SAVE your videos.");
@@ -2143,6 +2178,16 @@ a.download = `video-essay-q${questionCursor + 1}-${qName}.webm`;
     const canSave = window.userCanSave?.();
     if (!canSave) {
       window.openAuthModal?.("Please verify your email first, then you can save videos.");
+      return;
+    }
+
+    const maxVideos = window.MAX_VIDEOS ?? 10;
+    const activeCount = window.getActiveVideoCount?.() ?? 0;
+    if (activeCount >= maxVideos) {
+      alert(
+        `You've reached the ${maxVideos}-video limit. Delete old videos or wait for them to expire.\n` +
+        `已達 ${maxVideos} 部影片上限，請先刪除舊影片或等待到期。`
+      );
       return;
     }
 
