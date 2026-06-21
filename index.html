@@ -1211,6 +1211,29 @@ function renderAuthUI(user) {
     return collection(db, "users", uid, "videos");
   }
 
+  const pendingExpiredDeletes = new Set();
+
+  async function cleanupExpiredVideos(uid, docs) {
+    const nowMs = Date.now();
+    for (const d of docs) {
+      const v = d.data();
+      const expMs = v.expiresAt?.toDate ? v.expiresAt.toDate().getTime() : null;
+      if (expMs === null || expMs > nowMs) continue;
+      if (pendingExpiredDeletes.has(d.id)) continue;
+      pendingExpiredDeletes.add(d.id);
+      try {
+        if (v.storagePath) {
+          await deleteObject(sRef(storage, v.storagePath));
+        }
+        await deleteDoc(doc(db, "users", uid, "videos", d.id));
+        console.log(`[CLEANUP] Deleted expired video ${d.id} (expiresAt=${new Date(expMs).toISOString()})`);
+      } catch (err) {
+        console.warn(`[CLEANUP] Failed to delete expired video ${d.id}:`, err);
+        pendingExpiredDeletes.delete(d.id);
+      }
+    }
+  }
+
   let unsubscribeMyVideos = null;
 
   function startMyVideosListener(user) {
@@ -1237,7 +1260,29 @@ function renderAuthUI(user) {
         return;
       }
 
+      const nowMs = Date.now();
+      const liveDocs = [];
+      const expiredDocs = [];
       snap.forEach((d) => {
+        const v = d.data();
+        const expMs = v.expiresAt?.toDate ? v.expiresAt.toDate().getTime() : null;
+        if (expMs !== null && expMs <= nowMs) {
+          expiredDocs.push(d);
+        } else {
+          liveDocs.push(d);
+        }
+      });
+
+      if (expiredDocs.length > 0) {
+        cleanupExpiredVideos(user.uid, expiredDocs);
+      }
+
+      if (liveDocs.length === 0) {
+        myVideosList.innerHTML = `<div class="muted">No saved videos yet.</div>`;
+        return;
+      }
+
+      liveDocs.forEach((d) => {
         const v = d.data();
         const title = (v.title || "Video").replaceAll("<","&lt;");
         const created = v.createdAt?.toDate ? v.createdAt.toDate().toLocaleString() : "";
