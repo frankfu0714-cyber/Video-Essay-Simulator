@@ -71,26 +71,6 @@
     }
     textarea { min-height: 84px; resize: vertical; }
 
-    /* ===== Question bank textarea: friendlier reading ===== */
-    #questionBank {
-      min-height: 260px;
-      line-height: 1.6;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        "Helvetica Neue", Arial, sans-serif;
-      font-size: 0.95rem;
-      padding: 12px 14px;
-    }
-    .qBankActions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-    .qBankActions .btn {
-      padding: 8px 12px;
-      font-size: 0.9rem;
-    }
-
     /* ===== Record Screen ===== */
     #recordScreen {
       display:none;
@@ -692,7 +672,304 @@ body.lock-scroll {
   }
 }
 
-    
+/* ===== Active Questions List ===== */
+.activeQHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.activeQHeader .activeQTitle {
+  font-weight: 700;
+  color: #fff;
+  font-size: 1rem;
+}
+.activeQHeader .activeQCount {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  color: #fff;
+  font-weight: 600;
+}
+.activeQToolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+.btn-white {
+  background: #fff;
+  color: #2d1b69;
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.btn-white:hover { background: #f4f0ff; }
+.btn-outline {
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+}
+.btn-outline:hover { background: rgba(255,255,255,0.18); }
+
+#activeQuestionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+#activeQuestionList::-webkit-scrollbar { width: 8px; }
+#activeQuestionList::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.35);
+  border-radius: 8px;
+}
+
+.qRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.94);
+  border: 1px solid rgba(255,255,255,0.55);
+  border-radius: 10px;
+  padding: 8px 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.qRow.flash {
+  animation: qFlash 0.7s ease;
+}
+@keyframes qFlash {
+  0%   { background: #ffe58a; }
+  100% { background: rgba(255,255,255,0.94); }
+}
+.qRowIndex {
+  min-width: 22px;
+  text-align: right;
+  font-weight: 800;
+  color: #6b2bbf;
+  font-size: 0.9rem;
+}
+.qRowInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #111;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.qRowInput:focus {
+  outline: none;
+  border-color: #6b2bbf;
+  box-shadow: 0 0 0 3px rgba(107,43,191,0.18);
+}
+.qRowBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 800;
+  color: #2d1b69;
+  font-size: 0.95rem;
+  transition: background 0.15s;
+}
+.qRowBtn:hover { background: rgba(107,43,191,0.12); }
+.qRowBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.qRowBtn.del { color: #b91c1c; }
+.qRowBtn.del:hover { background: rgba(185,28,28,0.12); }
+
+.activeEmpty {
+  text-align: center;
+  padding: 24px 12px;
+  border: 2px dashed rgba(255,255,255,0.35);
+  border-radius: 12px;
+  color: #fff;
+}
+.activeEmpty p { margin-bottom: 12px; opacity: 0.9; }
+
+.openBankRow {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+#openBankBtn {
+  font-size: 1rem;
+  padding: 12px 20px;
+}
+
+/* ===== Question Bank Modal ===== */
+#bankModal {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+#bankModal.open { display: flex; }
+.bankCard {
+  width: min(720px, 100%);
+  background: #fff;
+  color: #111;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.bankHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.bankHeader h2 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+.bankHeader .bankClose {
+  background: #eee;
+  color: #111;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+#bankSearch {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-size: 1rem;
+  margin-bottom: 12px;
+  color: #111;
+  background: #fff;
+}
+#bankSearch:focus {
+  outline: none;
+  border-color: #6b2bbf;
+  box-shadow: 0 0 0 3px rgba(107,43,191,0.18);
+}
+#bankSections {
+  overflow-y: auto;
+  padding-right: 4px;
+  flex: 1;
+}
+#bankSections::-webkit-scrollbar { width: 8px; }
+#bankSections::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+}
+.bankSection {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.bankSectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f5f0ff;
+  cursor: pointer;
+  user-select: none;
+}
+.bankSectionHead .bankSectionTitle {
+  font-weight: 800;
+  color: #2d1b69;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bankSectionHead .bankChevron {
+  transition: transform 0.15s;
+  font-size: 0.8rem;
+  color: #6b2bbf;
+}
+.bankSection.collapsed .bankChevron { transform: rotate(-90deg); }
+.bankSection.collapsed .bankSectionBody { display: none; }
+.bankSectionHead .bankAddAll {
+  background: #fff;
+  border: 1px solid #d4c1f0;
+  color: #6b2bbf;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bankSectionHead .bankAddAll:hover { background: #ede1ff; }
+.bankSectionBody {
+  padding: 6px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bankQRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.bankQRow:hover { background: #faf7ff; }
+.bankQText {
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #111;
+}
+.bankAddBtn {
+  background: #6b2bbf;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bankAddBtn:hover { background: #5a24a3; }
+.bankAddBtn.added {
+  background: #e5e5e5;
+  color: #666;
+  cursor: default;
+}
+.bankEmpty {
+  text-align: center;
+  padding: 24px 12px;
+  color: #666;
+  font-style: italic;
+}
+
+@media (max-width: 480px) {
+  .qRowInput { font-size: 0.9rem; padding: 6px 8px; }
+  .qRow { padding: 6px 8px; gap: 4px; }
+  .qRowBtn { padding: 4px 6px; }
+  .bankCard { padding: 14px; }
+  .bankHeader h2 { font-size: 1.05rem; }
+}
+
   </style>
 </head>
 
@@ -811,108 +1088,26 @@ body.lock-scroll {
 
     <div style="height:12px"></div>
 
-    <label>
-      Question bank (one per line)
-      <textarea id="questionBank"># Personal & Self-Introduction
-How are you?
-Tell me about yourself / Walk me through your resume.
-Specific question on your current role or past experience (based on your resume).
-What did you learn the most from your undergraduate degree?
-What three words would you use to describe yourself?
-What's unique about you?
-What motivates you?
+    <div class="activeQHeader">
+      <div class="activeQTitle">Your practice questions</div>
+      <div class="activeQCount"><span id="activeQCount">0</span> question(s)</div>
+    </div>
 
-# Why MBA / Why Now
-Why MBA?
-Why MBA now?
-Why did you leave your previous job?
-What would you do if you didn't get admitted to our school?
-What other schools did you apply to?
+    <div class="activeQToolbar">
+      <button type="button" class="btn-sm btn-white" id="addCustomQBtn">+ Add custom question</button>
+      <button type="button" class="btn-sm btn-outline" id="shuffleOrderBtn">Shuffle order</button>
+      <button type="button" class="btn-sm btn-outline" id="clearActiveBtn">Clear all</button>
+    </div>
 
-# Career Goals
-What's your short-term career goal?
-What's your long-term career goal?
-What's your plan B?
-Why do you want to work in XXX industry (consulting, investment banking, etc.)?
-Why do you want to be in a XXX role (product manager, marketing, etc.)?
-What do you think are your key competencies to achieve your career goal?
+    <div id="activeQuestionList"></div>
 
-# School Fit
-Why XXX school? (e.g., Why UCLA Anderson?)
-What can you contribute to our school?
-How do you think XXX school can help you achieve your career goal?
-What clubs do you want to join?
-What leadership roles do you want to take?
+    <div id="activeEmptyState" class="activeEmpty" style="display:none;">
+      <p>No questions yet. Add your own or browse the question bank.</p>
+      <button type="button" class="btn-sm btn-white" id="openBankFromEmptyBtn">📚 Browse question bank</button>
+    </div>
 
-# Strengths, Weaknesses & Self-Awareness
-What is your greatest strength? Provide an example.
-What is your greatest weakness? Provide an example.
-What's the biggest misconception your coworkers have about you and why do they think that?
-Tell me about constructive feedback you've received. How have you improved since receiving the feedback?
-Tell me about a time you had to ask for help.
-
-# Leadership & Teamwork
-Tell me about a time you led a team. What role did you play?
-Tell me about a time you had to work cross-functionally.
-Tell me about a time that you had to influence someone.
-Tell me a time when you influenced someone.
-When you work on a team, what type of role do you naturally fall into?
-What would you say is your leadership style? Give me an example of when you took on that role.
-Tell me about a time when you had to adjust to a colleague's working style in order to complete a project or achieve your objectives.
-Give me an example of a time when you felt you led by example. What did you do and how did others react?
-Describe the best partner or supervisor with whom you've worked. What part of their managing style appealed to you?
-Tell me about a time when you mentored someone.
-How do you keep team members "bought in" on the strategy?
-What type of manager do you work well with, and what type do you not work well with?
-How do you prefer to be managed?
-Who do you admire as a leader?
-Tell me about an accomplishment that you are proud of.
-
-# Conflict & Difficult Situations
-Give me an example of when you had to work with someone that was difficult to get along with. How did you work through this?
-Tell me about a difficult conversation you had to have with someone.
-Tell me about a time you worked with a group and something went wrong.
-Tell me about a time you had to deal with conflict on a team.
-Tell me about a time when you were part of a team that had poor dynamics or didn't get along well.
-Tell me about a time your idea was rejected.
-Can you share an experience where a project dramatically shifted directions at the last minute? What did you do?
-Tell me about the last time something significant didn't go according to plan at work. What was your role? What was the outcome?
-
-# Failure, Growth & Ethics
-Tell me about a time you failed.
-Tell me about a time you made a bad decision.
-What is the biggest challenge you've faced in your career so far? What did you learn from this particular experience?
-Tell me about a time when you took a risk.
-Tell me about a time you faced an ethical dilemma.
-
-# Decision-Making & Problem-Solving
-Tell me about a time when you used data to make a decision or solve a problem.
-Tell me about a time when you had to make a decision but didn't have all the information you needed.
-Tell me about the toughest decision you had to make in the last six months.
-Tell me about a time when you went against what the data told you.
-Explain how you make decisions.
-Give me an example where you used a unique or novel approach to solve a problem.
-Describe a process that you made more efficient.
-Tell me about a time you used technology to solve a problem.
-What's your favorite tech product and why? How would you improve it?
-
-# Communication & Persuasion
-Describe a situation where you needed to persuade someone to see things your way. What steps did you take? What were the results?
-Describe a situation where you needed to persuade someone.
-Tell me about a time when you were communicating with someone and they did not understand you. What did you do?
-
-# Questions to Ask a Student / Alum
-Looking back on your MBA, what's your biggest takeaway?
-What do you enjoy the most at Anderson?
-Why did you transition from consulting to tech after MBA?
-What resources do you think are the most helpful for job recruiting?
-I have a couple months before joining an MBA — what preparation do you recommend I do?
-Besides the classes I mentioned before, are there any classes you recommend I take?</textarea>
-    </label>
-
-    <div class="qBankActions">
-      <button type="button" class="btn btn-ghost" id="addQuestionBtn" style="background:rgba(255,255,255,0.22); color:#fff;">+ Add question</button>
-      <button type="button" class="btn btn-ghost" id="randomizeBtn" style="background:rgba(255,255,255,0.22); color:#fff;">🔀 Random</button>
+    <div class="openBankRow">
+      <button type="button" class="btn btn-primary" id="openBankBtn">📚 Question Bank</button>
     </div>
 
     <div style="height:14px"></div>
@@ -970,6 +1165,20 @@ Besides the classes I mentioned before, are there any classes you recommend I ta
 
 </section>
 
+
+<!-- =======================
+     QUESTION BANK MODAL
+     ======================= -->
+<div id="bankModal" role="dialog" aria-modal="true" aria-labelledby="bankModalTitle">
+  <div class="bankCard" role="document">
+    <div class="bankHeader">
+      <h2 id="bankModalTitle">📚 Question Bank</h2>
+      <button type="button" class="bankClose" id="bankCloseBtn" aria-label="Close">✕ Close</button>
+    </div>
+    <input type="search" id="bankSearch" placeholder="Search questions..." autocomplete="off" />
+    <div id="bankSections"></div>
+  </div>
+</div>
 
 <!-- =======================
      RECORDING SCREEN
@@ -1709,8 +1918,6 @@ let practiceMode = "sequential_once";
 
 
 
-let lastQuestionBankText = "";
-
 // DOM
 const downloadBtn = document.getElementById("downloadBtn");
 const saveBtn = document.getElementById("saveBtn");
@@ -1731,7 +1938,20 @@ const recordScreen = document.getElementById("recordScreen");
 
 const prepTimeInput = document.getElementById("prepTime");
 const recordTimeInput = document.getElementById("recordTime");
-const questionBank = document.getElementById("questionBank");
+
+// Active question list + Question Bank UI
+const activeQuestionList = document.getElementById("activeQuestionList");
+const activeEmptyState = document.getElementById("activeEmptyState");
+const activeQCountEl = document.getElementById("activeQCount");
+const addCustomQBtn = document.getElementById("addCustomQBtn");
+const shuffleOrderBtn = document.getElementById("shuffleOrderBtn");
+const clearActiveBtn = document.getElementById("clearActiveBtn");
+const openBankBtn = document.getElementById("openBankBtn");
+const openBankFromEmptyBtn = document.getElementById("openBankFromEmptyBtn");
+const bankModal = document.getElementById("bankModal");
+const bankCloseBtn = document.getElementById("bankCloseBtn");
+const bankSearch = document.getElementById("bankSearch");
+const bankSectionsEl = document.getElementById("bankSections");
 
 const cameraSelect = document.getElementById("cameraSelect");
 const micSelect = document.getElementById("micSelect");
@@ -1970,14 +2190,395 @@ function speakQuestion(text) {
 
 
 function parseQuestions() {
-  const lines = questionBank.value
-    .split("\n")
-    .map(s => s.trim())
-    .filter(s => s && !s.startsWith("#"));
-
-  questions = lines.length
-    ? lines
+  questions = activeQuestions.length
+    ? activeQuestions.slice()
     : ["Tell us about yourself."];
+}
+
+/* ---------- Question Bank + Active List ---------- */
+const QUESTION_BANK = [
+  { section: "Personal & Background", questions: [
+    "Tell me about yourself.",
+    "Walk me through your resume.",
+    "What is one experience that shaped who you are today?",
+    "Describe your upbringing and how it influences your worldview.",
+    "What is a hobby or passion outside of work you'd like us to know?",
+    "If you could describe yourself in three words, what would they be?",
+    "What's a story your family always tells about you?"
+  ]},
+  { section: "Why MBA & Why Now", questions: [
+    "Why an MBA, and why now?",
+    "Why do you want to pursue an MBA at this stage of your career?",
+    "How will an MBA fill gaps in your current skill set?",
+    "What's the ROI you expect from an MBA?",
+    "If you didn't get an MBA, how would your career trajectory differ?",
+    "Why not a specialized master's degree or continuing education instead?",
+    "What have you done to prepare for business school?"
+  ]},
+  { section: "Why This School", questions: [
+    "Why our school specifically?",
+    "Which classes or professors are you most excited about?",
+    "Which clubs or student initiatives would you contribute to?",
+    "How does our school's culture align with your working style?",
+    "What will you bring to our incoming class?",
+    "Describe how you'll be a good peer and classmate."
+  ]},
+  { section: "Career Goals", questions: [
+    "What are your short-term and long-term career goals?",
+    "What role, function, and industry do you want to target post-MBA?",
+    "Which companies are on your target list post-graduation?",
+    "Where do you see yourself in ten years?",
+    "If Plan A doesn't happen, what's Plan B?",
+    "How does your past experience map to your post-MBA goal?",
+    "What impact do you want to have on your industry?"
+  ]},
+  { section: "Leadership", questions: [
+    "Tell me about a time you led a team through uncertainty.",
+    "Describe your leadership style.",
+    "Tell me about a time you influenced someone without formal authority.",
+    "Describe a situation where you had to make an unpopular decision.",
+    "Tell me about a time you led a group with conflicting priorities.",
+    "How do you motivate underperforming team members?",
+    "Share an example of when you had to lead through change."
+  ]},
+  { section: "Teamwork & Collaboration", questions: [
+    "Tell me about a difficult teammate and how you handled it.",
+    "Describe a time you resolved a conflict within a team.",
+    "When have you had to work across cultures or time zones?",
+    "Tell me about a time you built consensus from disagreement.",
+    "Describe your role on the most effective team you've been part of.",
+    "How do you handle giving critical feedback to a peer?",
+    "Tell me about a time you supported a teammate through a tough moment."
+  ]},
+  { section: "Failure & Learning", questions: [
+    "Tell me about a time you failed and what you learned.",
+    "Describe a project that didn't go as planned.",
+    "What's the biggest professional mistake you've made?",
+    "Tell me about a time you received tough feedback.",
+    "Describe a setback that changed how you approach your work.",
+    "When have you had to admit you were wrong?"
+  ]},
+  { section: "Strengths & Weaknesses", questions: [
+    "What are your greatest strengths and weaknesses?",
+    "What is one strength you are especially proud of?",
+    "What's a weakness you're actively working to improve?",
+    "How would your manager describe you?",
+    "How would your teammates describe you?",
+    "What kind of feedback do you get most often?",
+    "What's a skill you wish you had developed earlier in your career?"
+  ]},
+  { section: "Ethics & Values", questions: [
+    "Tell me about a time you faced an ethical dilemma at work.",
+    "Describe a decision where you had to stand up for what you believed.",
+    "What principle guides your professional decisions?",
+    "When have you had to push back on your manager?",
+    "Tell me about a time you had to choose between speed and quality.",
+    "Describe a situation where doing the right thing was hard."
+  ]},
+  { section: "Diversity & Impact", questions: [
+    "How do you contribute to diversity and inclusion?",
+    "Tell me about a time you worked with someone very different from you.",
+    "What community or cause do you actively support?",
+    "Describe a time you challenged bias — your own or someone else's.",
+    "What impact have you had on your community outside work?",
+    "Tell me about a mentor or role model who shaped you.",
+    "How have you paid it forward to someone earlier in their career?"
+  ]},
+  { section: "Curveball & Fun", questions: [
+    "If you could have dinner with any three people, who would they be and why?",
+    "What's a book, podcast, or article that changed your thinking recently?",
+    "If you had a year off with no obligations, what would you do?",
+    "What's a strong opinion you hold that others often disagree with?",
+    "Teach me something in 60 seconds.",
+    "What's the most useful piece of advice you've ever received?",
+    "What question do you wish we had asked, and how would you answer it?"
+  ]}
+];
+
+const DEFAULT_SEED_QUESTIONS = [
+  "Tell me about yourself.",
+  "Why an MBA, and why now?",
+  "What are your short-term and long-term career goals?",
+  "Tell me about a time you led a team through uncertainty.",
+  "What are your greatest strengths and weaknesses?"
+];
+
+const ACTIVE_STORAGE_KEY = "ves_active_questions";
+let activeQuestions = [];
+
+function loadActiveQuestions() {
+  try {
+    const raw = localStorage.getItem(ACTIVE_STORAGE_KEY);
+    if (raw === null) {
+      activeQuestions = DEFAULT_SEED_QUESTIONS.slice();
+      saveActiveQuestions();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    activeQuestions = Array.isArray(parsed)
+      ? parsed.filter(q => typeof q === "string")
+      : [];
+  } catch {
+    activeQuestions = DEFAULT_SEED_QUESTIONS.slice();
+  }
+}
+
+function saveActiveQuestions() {
+  try {
+    localStorage.setItem(ACTIVE_STORAGE_KEY, JSON.stringify(activeQuestions));
+  } catch {}
+}
+
+function isInActive(text) {
+  const t = text.trim().toLowerCase();
+  return activeQuestions.some(q => q.trim().toLowerCase() === t);
+}
+
+function renderActiveQuestions(flashIndex = -1) {
+  if (!activeQuestionList) return;
+  activeQuestionList.innerHTML = "";
+
+  if (activeQuestions.length === 0) {
+    activeQuestionList.style.display = "none";
+    activeEmptyState.style.display = "block";
+    activeQCountEl.textContent = "0";
+    updateBankModalStates();
+    return;
+  }
+
+  activeQuestionList.style.display = "flex";
+  activeEmptyState.style.display = "none";
+  activeQCountEl.textContent = String(activeQuestions.length);
+
+  activeQuestions.forEach((q, i) => {
+    const row = document.createElement("div");
+    row.className = "qRow" + (i === flashIndex ? " flash" : "");
+    row.dataset.i = String(i);
+
+    const idx = document.createElement("div");
+    idx.className = "qRowIndex";
+    idx.textContent = `${i + 1}.`;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "qRowInput";
+    input.value = q;
+    input.setAttribute("aria-label", `Question ${i + 1}`);
+    input.addEventListener("input", (e) => {
+      activeQuestions[i] = e.target.value;
+      saveActiveQuestions();
+    });
+    input.addEventListener("blur", () => {
+      activeQuestions[i] = input.value.trim();
+      saveActiveQuestions();
+      updateBankModalStates();
+    });
+
+    const upBtn = document.createElement("button");
+    upBtn.type = "button";
+    upBtn.className = "qRowBtn";
+    upBtn.title = "Move up";
+    upBtn.setAttribute("aria-label", "Move up");
+    upBtn.textContent = "↑";
+    upBtn.disabled = i === 0;
+    upBtn.addEventListener("click", () => moveActive(i, -1));
+
+    const downBtn = document.createElement("button");
+    downBtn.type = "button";
+    downBtn.className = "qRowBtn";
+    downBtn.title = "Move down";
+    downBtn.setAttribute("aria-label", "Move down");
+    downBtn.textContent = "↓";
+    downBtn.disabled = i === activeQuestions.length - 1;
+    downBtn.addEventListener("click", () => moveActive(i, 1));
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "qRowBtn del";
+    delBtn.title = "Remove";
+    delBtn.setAttribute("aria-label", "Remove question");
+    delBtn.textContent = "✕";
+    delBtn.addEventListener("click", () => removeActive(i));
+
+    row.appendChild(idx);
+    row.appendChild(input);
+    row.appendChild(upBtn);
+    row.appendChild(downBtn);
+    row.appendChild(delBtn);
+    activeQuestionList.appendChild(row);
+  });
+
+  updateBankModalStates();
+}
+
+function addActiveQuestion(text, opts = {}) {
+  const clean = String(text || "").trim();
+  if (!clean) return -1;
+  if (isInActive(clean)) return -1;
+  activeQuestions.push(clean);
+  saveActiveQuestions();
+  const idx = activeQuestions.length - 1;
+  renderActiveQuestions(opts.flash ? idx : -1);
+  return idx;
+}
+
+function removeActive(i) {
+  activeQuestions.splice(i, 1);
+  saveActiveQuestions();
+  renderActiveQuestions();
+}
+
+function moveActive(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= activeQuestions.length) return;
+  [activeQuestions[i], activeQuestions[j]] = [activeQuestions[j], activeQuestions[i]];
+  saveActiveQuestions();
+  renderActiveQuestions();
+}
+
+function shuffleActive() {
+  if (activeQuestions.length < 2) return;
+  shuffleArray(activeQuestions);
+  saveActiveQuestions();
+  renderActiveQuestions();
+}
+
+function clearAllActive() {
+  if (activeQuestions.length === 0) return;
+  if (!confirm("Remove all questions from your active list?")) return;
+  activeQuestions = [];
+  saveActiveQuestions();
+  renderActiveQuestions();
+}
+
+function addBlankCustomQuestion() {
+  activeQuestions.push("");
+  saveActiveQuestions();
+  renderActiveQuestions();
+  const rows = activeQuestionList.querySelectorAll(".qRow .qRowInput");
+  const last = rows[rows.length - 1];
+  if (last) {
+    last.focus();
+    last.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+/* ---------- Bank modal render ---------- */
+function renderBank(filter = "") {
+  if (!bankSectionsEl) return;
+  bankSectionsEl.innerHTML = "";
+  const term = filter.trim().toLowerCase();
+
+  let anyMatches = false;
+
+  QUESTION_BANK.forEach((sec, sIdx) => {
+    const sectionHit = term && sec.section.toLowerCase().includes(term);
+    const matching = !term
+      ? sec.questions.slice()
+      : sectionHit
+        ? sec.questions.slice()
+        : sec.questions.filter(q => q.toLowerCase().includes(term));
+
+    if (matching.length === 0) return;
+    anyMatches = true;
+
+    const section = document.createElement("div");
+    section.className = "bankSection";
+    section.dataset.sIdx = String(sIdx);
+
+    const head = document.createElement("div");
+    head.className = "bankSectionHead";
+
+    const title = document.createElement("div");
+    title.className = "bankSectionTitle";
+    title.innerHTML = `<span class="bankChevron">▼</span><span>${sec.section}</span> <span style="opacity:0.6; font-weight:600; font-size:0.85rem;">(${matching.length})</span>`;
+
+    const addAll = document.createElement("button");
+    addAll.type = "button";
+    addAll.className = "bankAddAll";
+    addAll.textContent = "+ Add all";
+    addAll.addEventListener("click", (e) => {
+      e.stopPropagation();
+      let added = 0;
+      matching.forEach(q => {
+        if (!isInActive(q)) {
+          activeQuestions.push(q);
+          added++;
+        }
+      });
+      if (added > 0) {
+        saveActiveQuestions();
+        renderActiveQuestions();
+        renderBank(bankSearch.value);
+      }
+    });
+
+    head.appendChild(title);
+    head.appendChild(addAll);
+    head.addEventListener("click", () => {
+      section.classList.toggle("collapsed");
+    });
+
+    const body = document.createElement("div");
+    body.className = "bankSectionBody";
+
+    matching.forEach(q => {
+      const row = document.createElement("div");
+      row.className = "bankQRow";
+
+      const text = document.createElement("div");
+      text.className = "bankQText";
+      text.textContent = q;
+
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      const already = isInActive(q);
+      addBtn.className = "bankAddBtn" + (already ? " added" : "");
+      addBtn.textContent = already ? "✓ Added" : "+ Add";
+      addBtn.disabled = already;
+      addBtn.addEventListener("click", () => {
+        if (isInActive(q)) return;
+        activeQuestions.push(q);
+        saveActiveQuestions();
+        renderActiveQuestions();
+        addBtn.textContent = "✓ Added";
+        addBtn.classList.add("added");
+        addBtn.disabled = true;
+      });
+
+      row.appendChild(text);
+      row.appendChild(addBtn);
+      body.appendChild(row);
+    });
+
+    section.appendChild(head);
+    section.appendChild(body);
+    bankSectionsEl.appendChild(section);
+  });
+
+  if (!anyMatches) {
+    const empty = document.createElement("div");
+    empty.className = "bankEmpty";
+    empty.textContent = term
+      ? `No questions match "${filter}".`
+      : "The question bank is empty.";
+    bankSectionsEl.appendChild(empty);
+  }
+}
+
+function updateBankModalStates() {
+  if (!bankModal.classList.contains("open")) return;
+  renderBank(bankSearch.value || "");
+}
+
+function openBankModal() {
+  renderBank(bankSearch.value || "");
+  bankModal.classList.add("open");
+  setTimeout(() => bankSearch.focus(), 50);
+}
+
+function closeBankModal() {
+  bankModal.classList.remove("open");
 }
 
 
@@ -2448,6 +3049,11 @@ homeBtn.addEventListener("click", () => {
 });
 
 goStart.addEventListener("click", async () => {
+  if (activeQuestions.length === 0) {
+    alert("Add at least one question to your active list before starting. Open the 📚 Question Bank or click + Add custom question.");
+    return;
+  }
+
   // 讀取模式
   practiceMode = modeSelect?.value || "sequential_once";
 
@@ -2513,37 +3119,24 @@ micToggle.addEventListener("change", async () => {
   try { await startStream(); } catch {}
 });
 
-/* ---------- Question bank action buttons ---------- */
-const addQuestionBtn = document.getElementById("addQuestionBtn");
-const randomizeBtn = document.getElementById("randomizeBtn");
-
-addQuestionBtn?.addEventListener("click", () => {
-  const ta = questionBank;
-  const current = ta.value;
-  const needsNewline = current.length > 0 && !current.endsWith("\n");
-  ta.value = current + (needsNewline ? "\n" : "");
-  ta.focus();
-  const end = ta.value.length;
-  try { ta.setSelectionRange(end, end); } catch {}
-  ta.scrollTop = ta.scrollHeight;
+// Question bank + active list event wiring
+addCustomQBtn?.addEventListener("click", addBlankCustomQuestion);
+shuffleOrderBtn?.addEventListener("click", shuffleActive);
+clearActiveBtn?.addEventListener("click", clearAllActive);
+openBankBtn?.addEventListener("click", openBankModal);
+openBankFromEmptyBtn?.addEventListener("click", openBankModal);
+bankCloseBtn?.addEventListener("click", closeBankModal);
+bankModal?.addEventListener("click", (e) => {
+  if (e.target === bankModal) closeBankModal();
 });
-
-randomizeBtn?.addEventListener("click", () => {
-  const ta = questionBank;
-  const lines = ta.value.split("\n").map(s => s.trim()).filter(Boolean);
-  if (lines.length < 2) {
-    alert("Add at least two questions before shuffling.");
-    return;
-  }
-  if (lines.length > 12 && !confirm(`Shuffle ${lines.length} questions into a random order?`)) {
-    return;
-  }
-  for (let i = lines.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [lines[i], lines[j]] = [lines[j], lines[i]];
-  }
-  ta.value = lines.join("\n") + "\n";
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && bankModal.classList.contains("open")) closeBankModal();
 });
+bankSearch?.addEventListener("input", (e) => renderBank(e.target.value));
+
+// Hydrate active-questions list from localStorage (or seed)
+loadActiveQuestions();
+renderActiveQuestions();
 
 /* ---------- Custom playbar (smooth, RAF-driven) ---------- */
 const pbPlay = document.getElementById("pbPlay");
