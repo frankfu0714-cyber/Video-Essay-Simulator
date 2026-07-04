@@ -813,30 +813,101 @@ body.lock-scroll {
 
     <label>
       Question bank (one per line)
-      <textarea id="questionBank">Tell us about yourself.
-Why an MBA, and why now?
-Walk us through your short-term post-MBA goals.
-Where do you see yourself ten years from now?
-Tell us about a time you failed and what you learned from it.
-Describe a time you led a team through uncertainty.
-Tell us about a time you influenced others without formal authority.
-Describe a difficult teammate and how you worked with them.
-Share an ethical dilemma you faced and how you resolved it.
-Tell us about the most meaningful team you have managed or been part of.
-Describe a time you received tough feedback and what you did with it.
-Tell us about a time you gave difficult feedback to someone else.
-How do you set priorities when everything feels urgent?
-Describe a moment when you had to recover from a significant setback.
-Tell us about an innovation or change you led at work.
-Why this school, and why do you believe it is the right fit for you?
-What will you uniquely contribute to our community?
-How do you plan to engage with our alumni network after graduation?
-What excites you most about our program specifically?
-Tell us about a book, film, or hobby that has shaped who you are.
-Describe a person you deeply admire and why.
-Walk us through what a perfect day looks like for you.
-What is something most people would be surprised to learn about you?
-If you could not pursue your current career path, what would you do instead?</textarea>
+      <textarea id="questionBank"># Personal & Self-Introduction
+How are you?
+Tell me about yourself / Walk me through your resume.
+Specific question on your current role or past experience (based on your resume).
+What did you learn the most from your undergraduate degree?
+What three words would you use to describe yourself?
+What's unique about you?
+What motivates you?
+
+# Why MBA / Why Now
+Why MBA?
+Why MBA now?
+Why did you leave your previous job?
+What would you do if you didn't get admitted to our school?
+What other schools did you apply to?
+
+# Career Goals
+What's your short-term career goal?
+What's your long-term career goal?
+What's your plan B?
+Why do you want to work in XXX industry (consulting, investment banking, etc.)?
+Why do you want to be in a XXX role (product manager, marketing, etc.)?
+What do you think are your key competencies to achieve your career goal?
+
+# School Fit
+Why XXX school? (e.g., Why UCLA Anderson?)
+What can you contribute to our school?
+How do you think XXX school can help you achieve your career goal?
+What clubs do you want to join?
+What leadership roles do you want to take?
+
+# Strengths, Weaknesses & Self-Awareness
+What is your greatest strength? Provide an example.
+What is your greatest weakness? Provide an example.
+What's the biggest misconception your coworkers have about you and why do they think that?
+Tell me about constructive feedback you've received. How have you improved since receiving the feedback?
+Tell me about a time you had to ask for help.
+
+# Leadership & Teamwork
+Tell me about a time you led a team. What role did you play?
+Tell me about a time you had to work cross-functionally.
+Tell me about a time that you had to influence someone.
+Tell me a time when you influenced someone.
+When you work on a team, what type of role do you naturally fall into?
+What would you say is your leadership style? Give me an example of when you took on that role.
+Tell me about a time when you had to adjust to a colleague's working style in order to complete a project or achieve your objectives.
+Give me an example of a time when you felt you led by example. What did you do and how did others react?
+Describe the best partner or supervisor with whom you've worked. What part of their managing style appealed to you?
+Tell me about a time when you mentored someone.
+How do you keep team members "bought in" on the strategy?
+What type of manager do you work well with, and what type do you not work well with?
+How do you prefer to be managed?
+Who do you admire as a leader?
+Tell me about an accomplishment that you are proud of.
+
+# Conflict & Difficult Situations
+Give me an example of when you had to work with someone that was difficult to get along with. How did you work through this?
+Tell me about a difficult conversation you had to have with someone.
+Tell me about a time you worked with a group and something went wrong.
+Tell me about a time you had to deal with conflict on a team.
+Tell me about a time when you were part of a team that had poor dynamics or didn't get along well.
+Tell me about a time your idea was rejected.
+Can you share an experience where a project dramatically shifted directions at the last minute? What did you do?
+Tell me about the last time something significant didn't go according to plan at work. What was your role? What was the outcome?
+
+# Failure, Growth & Ethics
+Tell me about a time you failed.
+Tell me about a time you made a bad decision.
+What is the biggest challenge you've faced in your career so far? What did you learn from this particular experience?
+Tell me about a time when you took a risk.
+Tell me about a time you faced an ethical dilemma.
+
+# Decision-Making & Problem-Solving
+Tell me about a time when you used data to make a decision or solve a problem.
+Tell me about a time when you had to make a decision but didn't have all the information you needed.
+Tell me about the toughest decision you had to make in the last six months.
+Tell me about a time when you went against what the data told you.
+Explain how you make decisions.
+Give me an example where you used a unique or novel approach to solve a problem.
+Describe a process that you made more efficient.
+Tell me about a time you used technology to solve a problem.
+What's your favorite tech product and why? How would you improve it?
+
+# Communication & Persuasion
+Describe a situation where you needed to persuade someone to see things your way. What steps did you take? What were the results?
+Describe a situation where you needed to persuade someone.
+Tell me about a time when you were communicating with someone and they did not understand you. What did you do?
+
+# Questions to Ask a Student / Alum
+Looking back on your MBA, what's your biggest takeaway?
+What do you enjoy the most at Anderson?
+Why did you transition from consulting to tech after MBA?
+What resources do you think are the most helpful for job recruiting?
+I have a couple months before joining an MBA — what preparation do you recommend I do?
+Besides the classes I mentioned before, are there any classes you recommend I take?</textarea>
     </label>
 
     <div class="qBankActions">
@@ -1902,7 +1973,7 @@ function parseQuestions() {
   const lines = questionBank.value
     .split("\n")
     .map(s => s.trim())
-    .filter(Boolean);
+    .filter(s => s && !s.startsWith("#"));
 
   questions = lines.length
     ? lines
