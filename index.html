@@ -193,8 +193,8 @@
       border-radius: 14px;
       background:#000;
       display: block;
-      /* ✅ Recorded video shows the person as they truly look (NOT mirrored) */
-      transform: none;
+      /* Mirror playback to match the mirrored live preview the user recorded against. */
+      transform: scaleX(-1);
     }
 
     /* ===== Custom playbar (smooth via requestAnimationFrame) ===== */
