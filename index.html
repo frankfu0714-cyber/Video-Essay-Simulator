@@ -759,15 +759,15 @@ Tell us about a time you received tough feedback.</textarea>
     </label>
 
     <label>
-      Your feedback
-      <input id="commentText" maxlength="300" placeholder="What you liked / what to improve..."/>
+      Your feedback about this app
+      <input id="commentText" maxlength="300" placeholder="What did you like or want us to improve about this app?"/>
     </label>
   </div>
 
   <div style="height:12px"></div>
 
   <div class="row" style="justify-content:space-between;">
-    <div class="muted" id="commentStatus">Be kind and constructive 🙂</div>
+    <div class="muted" id="commentStatus">Share your thoughts on the app — be kind and constructive 🙂</div>
     <button class="btn btn-primary" id="submitComment">Post</button>
   </div>
 
@@ -1022,7 +1022,7 @@ window.bumpRecording = bumpRecording;
       await addDoc(commentsRef, { name: name || "Anonymous", text, createdAt: serverTimestamp() });
       commentText.value = "";
       commentStatus.textContent = "Posted ✅";
-      setTimeout(() => (commentStatus.textContent = "Be kind and constructive 🙂"), 1200);
+      setTimeout(() => (commentStatus.textContent = "Share your thoughts on the app — be kind and constructive 🙂"), 1200);
     } catch (e) {
       commentStatus.textContent = "Failed to post. Please try again.";
       console.error(e);
