@@ -71,6 +71,26 @@
     }
     textarea { min-height: 84px; resize: vertical; }
 
+    /* ===== Question bank textarea: friendlier reading ===== */
+    #questionBank {
+      min-height: 260px;
+      line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.95rem;
+      padding: 12px 14px;
+    }
+    .qBankActions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .qBankActions .btn {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+
     /* ===== Record Screen ===== */
     #recordScreen {
       display:none;
@@ -192,6 +212,83 @@
       max-height: 65vh;
       border-radius: 14px;
       background:#000;
+      display: block;
+      /* ✅ Recorded video shows the person as they truly look (NOT mirrored) */
+      transform: none;
+    }
+
+    /* ===== Custom playbar (smooth via requestAnimationFrame) ===== */
+    .customPlayer { position: relative; }
+    .customPlayer video { cursor: pointer; }
+
+    .playbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      color: #fff;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .playbar button.pbBtn {
+      background: transparent;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .playbar button.pbBtn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+    .playbar .pbTime {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 0.85rem;
+      opacity: 0.95;
+      white-space: nowrap;
+    }
+    .pbTrack {
+      position: relative;
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .pbFill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: linear-gradient(90deg, #e04a3a, #b23bd6);
+      border-radius: 999px;
+      /* Smooth: JS updates via rAF, no CSS transition needed */
+    }
+    .pbHandle {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      .playbar { gap: 6px; padding: 6px 8px; }
+      .playbar .pbTime { font-size: 0.75rem; }
     }
     /* ===== REC pulsing + progress ===== */
 #recBadge {
@@ -716,12 +813,36 @@ body.lock-scroll {
 
     <label>
       Question bank (one per line)
-      <textarea id="questionBank">Tell us about a time you failed and what you learned.
-Why MBA, and why now?
+      <textarea id="questionBank">Tell us about yourself.
+Why an MBA, and why now?
+Walk us through your short-term post-MBA goals.
+Where do you see yourself ten years from now?
+Tell us about a time you failed and what you learned from it.
 Describe a time you led a team through uncertainty.
-What is your short-term goal, and why this school?
-Tell us about a time you received tough feedback.</textarea>
+Tell us about a time you influenced others without formal authority.
+Describe a difficult teammate and how you worked with them.
+Share an ethical dilemma you faced and how you resolved it.
+Tell us about the most meaningful team you have managed or been part of.
+Describe a time you received tough feedback and what you did with it.
+Tell us about a time you gave difficult feedback to someone else.
+How do you set priorities when everything feels urgent?
+Describe a moment when you had to recover from a significant setback.
+Tell us about an innovation or change you led at work.
+Why this school, and why do you believe it is the right fit for you?
+What will you uniquely contribute to our community?
+How do you plan to engage with our alumni network after graduation?
+What excites you most about our program specifically?
+Tell us about a book, film, or hobby that has shaped who you are.
+Describe a person you deeply admire and why.
+Walk us through what a perfect day looks like for you.
+What is something most people would be surprised to learn about you?
+If you could not pursue your current career path, what would you do instead?</textarea>
     </label>
+
+    <div class="qBankActions">
+      <button type="button" class="btn btn-ghost" id="addQuestionBtn" style="background:rgba(255,255,255,0.22); color:#fff;">+ Add question</button>
+      <button type="button" class="btn btn-ghost" id="randomizeBtn" style="background:rgba(255,255,255,0.22); color:#fff;">🔀 Random</button>
+    </div>
 
     <div style="height:14px"></div>
 
@@ -864,7 +985,20 @@ Tell us about a time you received tough feedback.</textarea>
         </div>
       </div>
 
-      <video id="playbackVideo" controls playsinline></video>
+      <div class="customPlayer" id="customPlayer">
+        <video id="playbackVideo" playsinline></video>
+        <div class="playbar" id="playbar">
+          <button type="button" class="pbBtn" id="pbPlay" aria-label="Play/Pause">▶</button>
+          <span class="pbTime" id="pbCurrent">0:00</span>
+          <div class="pbTrack" id="pbTrack">
+            <div class="pbFill" id="pbFill"></div>
+            <div class="pbHandle" id="pbHandle"></div>
+          </div>
+          <span class="pbTime" id="pbDuration">0:00</span>
+          <button type="button" class="pbBtn" id="pbMute" aria-label="Mute/Unmute">🔊</button>
+          <button type="button" class="pbBtn" id="pbFull" aria-label="Fullscreen">⛶</button>
+        </div>
+      </div>
       <div class="muted" style="margin-top:10px;">
         If playback is blank on some browsers, try Chrome/Edge on desktop.
       </div>
@@ -2307,6 +2441,164 @@ micToggle.addEventListener("change", async () => {
   if (state === State.RECORD) return;
   try { await startStream(); } catch {}
 });
+
+/* ---------- Question bank action buttons ---------- */
+const addQuestionBtn = document.getElementById("addQuestionBtn");
+const randomizeBtn = document.getElementById("randomizeBtn");
+
+addQuestionBtn?.addEventListener("click", () => {
+  const ta = questionBank;
+  const current = ta.value;
+  const needsNewline = current.length > 0 && !current.endsWith("\n");
+  ta.value = current + (needsNewline ? "\n" : "");
+  ta.focus();
+  const end = ta.value.length;
+  try { ta.setSelectionRange(end, end); } catch {}
+  ta.scrollTop = ta.scrollHeight;
+});
+
+randomizeBtn?.addEventListener("click", () => {
+  const ta = questionBank;
+  const lines = ta.value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    alert("Add at least two questions before shuffling.");
+    return;
+  }
+  if (lines.length > 12 && !confirm(`Shuffle ${lines.length} questions into a random order?`)) {
+    return;
+  }
+  for (let i = lines.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lines[i], lines[j]] = [lines[j], lines[i]];
+  }
+  ta.value = lines.join("\n") + "\n";
+});
+
+/* ---------- Custom playbar (smooth, RAF-driven) ---------- */
+const pbPlay = document.getElementById("pbPlay");
+const pbMute = document.getElementById("pbMute");
+const pbFull = document.getElementById("pbFull");
+const pbCurrent = document.getElementById("pbCurrent");
+const pbDuration = document.getElementById("pbDuration");
+const pbTrack = document.getElementById("pbTrack");
+const pbFill = document.getElementById("pbFill");
+const pbHandle = document.getElementById("pbHandle");
+const customPlayer = document.getElementById("customPlayer");
+
+let pbRafId = null;
+let pbSeeking = false;
+
+function fmtTime(sec) {
+  if (!Number.isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function pbUpdateFrame() {
+  const dur = playbackVideo.duration;
+  const cur = playbackVideo.currentTime;
+  if (Number.isFinite(dur) && dur > 0) {
+    const pct = Math.max(0, Math.min(100, (cur / dur) * 100));
+    pbFill.style.width = pct + "%";
+    pbHandle.style.left = pct + "%";
+  }
+  if (!pbSeeking) pbCurrent.textContent = fmtTime(cur);
+  if (!playbackVideo.paused && !playbackVideo.ended) {
+    pbRafId = requestAnimationFrame(pbUpdateFrame);
+  } else {
+    pbRafId = null;
+  }
+}
+
+function pbStartLoop() {
+  if (pbRafId) cancelAnimationFrame(pbRafId);
+  pbRafId = requestAnimationFrame(pbUpdateFrame);
+}
+
+function pbStopLoop() {
+  if (pbRafId) cancelAnimationFrame(pbRafId);
+  pbRafId = null;
+}
+
+function pbSyncPlayIcon() {
+  pbPlay.textContent = playbackVideo.paused ? "▶" : "❚❚";
+}
+
+function pbSyncMuteIcon() {
+  pbMute.textContent = playbackVideo.muted || playbackVideo.volume === 0 ? "🔇" : "🔊";
+}
+
+function pbSyncDuration() {
+  pbDuration.textContent = fmtTime(playbackVideo.duration);
+}
+
+playbackVideo.addEventListener("loadedmetadata", () => {
+  pbSyncDuration();
+  pbUpdateFrame();
+});
+playbackVideo.addEventListener("durationchange", pbSyncDuration);
+playbackVideo.addEventListener("play", () => { pbSyncPlayIcon(); pbStartLoop(); });
+playbackVideo.addEventListener("pause", () => { pbSyncPlayIcon(); pbStopLoop(); pbUpdateFrame(); });
+playbackVideo.addEventListener("ended", () => { pbSyncPlayIcon(); pbStopLoop(); });
+playbackVideo.addEventListener("volumechange", pbSyncMuteIcon);
+playbackVideo.addEventListener("timeupdate", () => { if (playbackVideo.paused) pbUpdateFrame(); });
+
+pbPlay.addEventListener("click", () => {
+  if (playbackVideo.paused) playbackVideo.play().catch(()=>{});
+  else playbackVideo.pause();
+});
+
+playbackVideo.addEventListener("click", () => {
+  if (playbackVideo.paused) playbackVideo.play().catch(()=>{});
+  else playbackVideo.pause();
+});
+
+pbMute.addEventListener("click", () => {
+  playbackVideo.muted = !playbackVideo.muted;
+  pbSyncMuteIcon();
+});
+
+pbFull.addEventListener("click", () => {
+  const target = customPlayer;
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.();
+  } else if (target.requestFullscreen) {
+    target.requestFullscreen().catch(()=>{});
+  } else if (playbackVideo.webkitEnterFullscreen) {
+    playbackVideo.webkitEnterFullscreen();
+  }
+});
+
+function pbSeekFromEvent(e) {
+  const rect = pbTrack.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const dur = playbackVideo.duration;
+  if (!Number.isFinite(dur) || dur <= 0) return;
+  const t = ratio * dur;
+  playbackVideo.currentTime = t;
+  pbFill.style.width = (ratio * 100) + "%";
+  pbHandle.style.left = (ratio * 100) + "%";
+  pbCurrent.textContent = fmtTime(t);
+}
+
+pbTrack.addEventListener("pointerdown", (e) => {
+  pbSeeking = true;
+  pbTrack.setPointerCapture?.(e.pointerId);
+  pbSeekFromEvent(e);
+});
+pbTrack.addEventListener("pointermove", (e) => {
+  if (!pbSeeking) return;
+  pbSeekFromEvent(e);
+});
+pbTrack.addEventListener("pointerup", (e) => {
+  if (!pbSeeking) return;
+  pbSeekFromEvent(e);
+  pbSeeking = false;
+  try { pbTrack.releasePointerCapture?.(e.pointerId); } catch {}
+});
+pbTrack.addEventListener("pointercancel", () => { pbSeeking = false; });
 
 // 進入頁面先要權限（可讓裝置列表顯示名稱）
 (async function init() {
