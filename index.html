@@ -193,8 +193,7 @@
       border-radius: 14px;
       background:#000;
       display: block;
-      /* Mirror playback to match the mirrored live preview the user recorded against. */
-      transform: scaleX(-1);
+      /* Recorded pixels are already mirrored (baked in at record time), so no CSS transform here. */
     }
 
     /* ===== Custom playbar (smooth via requestAnimationFrame) ===== */
@@ -2674,6 +2673,52 @@ function pickMimeType() {
   return ""; // 讓瀏覽器自己決定
 }
 
+// Build a MediaStream whose video track is the camera flipped horizontally,
+// so the recorded pixels match the mirrored preview the user records against.
+// Returns { stream, cleanup } — cleanup must run when recording stops.
+function buildMirroredRecordStream(sourceStream) {
+  const videoTracks = sourceStream.getVideoTracks();
+  const audioTracks = sourceStream.getAudioTracks();
+
+  if (videoTracks.length === 0) {
+    return { stream: sourceStream, cleanup: () => {} };
+  }
+
+  const settings = videoTracks[0].getSettings?.() || {};
+  const w = settings.width  || cameraBg.videoWidth  || 1280;
+  const h = settings.height || cameraBg.videoHeight || 720;
+  const fps = settings.frameRate || 30;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+
+  ctx.translate(w, 0);
+  ctx.scale(-1, 1);
+
+  let rafId = null;
+  const drawFrame = () => {
+    if (cameraBg.readyState >= 2) {
+      ctx.drawImage(cameraBg, 0, 0, w, h);
+    }
+    rafId = requestAnimationFrame(drawFrame);
+  };
+  drawFrame();
+
+  const captured = canvas.captureStream(fps);
+  const mixed = new MediaStream();
+  captured.getVideoTracks().forEach(t => mixed.addTrack(t));
+  audioTracks.forEach(t => mixed.addTrack(t));
+
+  const cleanup = () => {
+    if (rafId != null) cancelAnimationFrame(rafId);
+    captured.getVideoTracks().forEach(t => t.stop());
+  };
+
+  return { stream: mixed, cleanup };
+}
+
 function startRecording() {
   if (!mediaStream) {
     alert("Camera and Microphone are both off. Please enable at least one to record.");
@@ -2682,13 +2727,17 @@ function startRecording() {
 
   recordedChunks = [];
   const mimeType = pickMimeType();
-  recorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined);
+
+  const { stream: recordStream, cleanup: mirrorCleanup } = buildMirroredRecordStream(mediaStream);
+  recorder = new MediaRecorder(recordStream, mimeType ? { mimeType } : undefined);
+  recorder._mirrorCleanup = mirrorCleanup;
 
   recorder.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) recordedChunks.push(e.data);
   };
 
  recorder.onstop = () => {
+  recorder._mirrorCleanup?.();
   lastRecordedBlob = new Blob(
     recordedChunks,
     { type: recorder.mimeType || "video/webm" }
