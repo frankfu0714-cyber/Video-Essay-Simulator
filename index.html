@@ -192,6 +192,83 @@
       max-height: 65vh;
       border-radius: 14px;
       background:#000;
+      display: block;
+      /* ✅ Recorded video shows the person as they truly look (NOT mirrored) */
+      transform: none;
+    }
+
+    /* ===== Custom playbar (smooth via requestAnimationFrame) ===== */
+    .customPlayer { position: relative; }
+    .customPlayer video { cursor: pointer; }
+
+    .playbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      color: #fff;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .playbar button.pbBtn {
+      background: transparent;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .playbar button.pbBtn:hover {
+      background: rgba(255,255,255,0.12);
+    }
+    .playbar .pbTime {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      font-size: 0.85rem;
+      opacity: 0.95;
+      white-space: nowrap;
+    }
+    .pbTrack {
+      position: relative;
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .pbFill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: linear-gradient(90deg, #e04a3a, #b23bd6);
+      border-radius: 999px;
+      /* Smooth: JS updates via rAF, no CSS transition needed */
+    }
+    .pbHandle {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+    @media (max-width: 600px) {
+      .playbar { gap: 6px; padding: 6px 8px; }
+      .playbar .pbTime { font-size: 0.75rem; }
     }
     /* ===== REC pulsing + progress ===== */
 #recBadge {
@@ -1069,15 +1146,15 @@ body.lock-scroll {
     </label>
 
     <label>
-      Your feedback
-      <input id="commentText" maxlength="300" placeholder="What you liked / what to improve..."/>
+      Your feedback about this app
+      <input id="commentText" maxlength="300" placeholder="What did you like or want us to improve about this app?"/>
     </label>
   </div>
 
   <div style="height:12px"></div>
 
   <div class="row" style="justify-content:space-between;">
-    <div class="muted" id="commentStatus">Be kind and constructive 🙂</div>
+    <div class="muted" id="commentStatus">Share your thoughts on the app — be kind and constructive 🙂</div>
     <button class="btn btn-primary" id="submitComment">Post</button>
   </div>
 
@@ -1188,7 +1265,20 @@ body.lock-scroll {
         </div>
       </div>
 
-      <video id="playbackVideo" controls playsinline></video>
+      <div class="customPlayer" id="customPlayer">
+        <video id="playbackVideo" playsinline></video>
+        <div class="playbar" id="playbar">
+          <button type="button" class="pbBtn" id="pbPlay" aria-label="Play/Pause">▶</button>
+          <span class="pbTime" id="pbCurrent">0:00</span>
+          <div class="pbTrack" id="pbTrack">
+            <div class="pbFill" id="pbFill"></div>
+            <div class="pbHandle" id="pbHandle"></div>
+          </div>
+          <span class="pbTime" id="pbDuration">0:00</span>
+          <button type="button" class="pbBtn" id="pbMute" aria-label="Mute/Unmute">🔊</button>
+          <button type="button" class="pbBtn" id="pbFull" aria-label="Fullscreen">⛶</button>
+        </div>
+      </div>
       <div class="muted" style="margin-top:10px;">
         If playback is blank on some browsers, try Chrome/Edge on desktop.
       </div>
@@ -1346,7 +1436,7 @@ window.bumpRecording = bumpRecording;
       await addDoc(commentsRef, { name: name || "Anonymous", text, createdAt: serverTimestamp() });
       commentText.value = "";
       commentStatus.textContent = "Posted ✅";
-      setTimeout(() => (commentStatus.textContent = "Be kind and constructive 🙂"), 1200);
+      setTimeout(() => (commentStatus.textContent = "Share your thoughts on the app — be kind and constructive 🙂"), 1200);
     } catch (e) {
       commentStatus.textContent = "Failed to post. Please try again.";
       console.error(e);
@@ -3047,6 +3137,132 @@ bankSearch?.addEventListener("input", (e) => renderBank(e.target.value));
 // Hydrate active-questions list from localStorage (or seed)
 loadActiveQuestions();
 renderActiveQuestions();
+
+/* ---------- Custom playbar (smooth, RAF-driven) ---------- */
+const pbPlay = document.getElementById("pbPlay");
+const pbMute = document.getElementById("pbMute");
+const pbFull = document.getElementById("pbFull");
+const pbCurrent = document.getElementById("pbCurrent");
+const pbDuration = document.getElementById("pbDuration");
+const pbTrack = document.getElementById("pbTrack");
+const pbFill = document.getElementById("pbFill");
+const pbHandle = document.getElementById("pbHandle");
+const customPlayer = document.getElementById("customPlayer");
+
+let pbRafId = null;
+let pbSeeking = false;
+
+function fmtTime(sec) {
+  if (!Number.isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function pbUpdateFrame() {
+  const dur = playbackVideo.duration;
+  const cur = playbackVideo.currentTime;
+  if (Number.isFinite(dur) && dur > 0) {
+    const pct = Math.max(0, Math.min(100, (cur / dur) * 100));
+    pbFill.style.width = pct + "%";
+    pbHandle.style.left = pct + "%";
+  }
+  if (!pbSeeking) pbCurrent.textContent = fmtTime(cur);
+  if (!playbackVideo.paused && !playbackVideo.ended) {
+    pbRafId = requestAnimationFrame(pbUpdateFrame);
+  } else {
+    pbRafId = null;
+  }
+}
+
+function pbStartLoop() {
+  if (pbRafId) cancelAnimationFrame(pbRafId);
+  pbRafId = requestAnimationFrame(pbUpdateFrame);
+}
+
+function pbStopLoop() {
+  if (pbRafId) cancelAnimationFrame(pbRafId);
+  pbRafId = null;
+}
+
+function pbSyncPlayIcon() {
+  pbPlay.textContent = playbackVideo.paused ? "▶" : "❚❚";
+}
+
+function pbSyncMuteIcon() {
+  pbMute.textContent = playbackVideo.muted || playbackVideo.volume === 0 ? "🔇" : "🔊";
+}
+
+function pbSyncDuration() {
+  pbDuration.textContent = fmtTime(playbackVideo.duration);
+}
+
+playbackVideo.addEventListener("loadedmetadata", () => {
+  pbSyncDuration();
+  pbUpdateFrame();
+});
+playbackVideo.addEventListener("durationchange", pbSyncDuration);
+playbackVideo.addEventListener("play", () => { pbSyncPlayIcon(); pbStartLoop(); });
+playbackVideo.addEventListener("pause", () => { pbSyncPlayIcon(); pbStopLoop(); pbUpdateFrame(); });
+playbackVideo.addEventListener("ended", () => { pbSyncPlayIcon(); pbStopLoop(); });
+playbackVideo.addEventListener("volumechange", pbSyncMuteIcon);
+playbackVideo.addEventListener("timeupdate", () => { if (playbackVideo.paused) pbUpdateFrame(); });
+
+pbPlay.addEventListener("click", () => {
+  if (playbackVideo.paused) playbackVideo.play().catch(()=>{});
+  else playbackVideo.pause();
+});
+
+playbackVideo.addEventListener("click", () => {
+  if (playbackVideo.paused) playbackVideo.play().catch(()=>{});
+  else playbackVideo.pause();
+});
+
+pbMute.addEventListener("click", () => {
+  playbackVideo.muted = !playbackVideo.muted;
+  pbSyncMuteIcon();
+});
+
+pbFull.addEventListener("click", () => {
+  const target = customPlayer;
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.();
+  } else if (target.requestFullscreen) {
+    target.requestFullscreen().catch(()=>{});
+  } else if (playbackVideo.webkitEnterFullscreen) {
+    playbackVideo.webkitEnterFullscreen();
+  }
+});
+
+function pbSeekFromEvent(e) {
+  const rect = pbTrack.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const dur = playbackVideo.duration;
+  if (!Number.isFinite(dur) || dur <= 0) return;
+  const t = ratio * dur;
+  playbackVideo.currentTime = t;
+  pbFill.style.width = (ratio * 100) + "%";
+  pbHandle.style.left = (ratio * 100) + "%";
+  pbCurrent.textContent = fmtTime(t);
+}
+
+pbTrack.addEventListener("pointerdown", (e) => {
+  pbSeeking = true;
+  pbTrack.setPointerCapture?.(e.pointerId);
+  pbSeekFromEvent(e);
+});
+pbTrack.addEventListener("pointermove", (e) => {
+  if (!pbSeeking) return;
+  pbSeekFromEvent(e);
+});
+pbTrack.addEventListener("pointerup", (e) => {
+  if (!pbSeeking) return;
+  pbSeekFromEvent(e);
+  pbSeeking = false;
+  try { pbTrack.releasePointerCapture?.(e.pointerId); } catch {}
+});
+pbTrack.addEventListener("pointercancel", () => { pbSeeking = false; });
 
 // 進入頁面先要權限（可讓裝置列表顯示名稱）
 (async function init() {
