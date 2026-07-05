@@ -2673,6 +2673,107 @@ function pickMimeType() {
   return ""; // 讓瀏覽器自己決定
 }
 
+// Read the currently-displayed question from the DOM. Returns "" for the
+// initial placeholder or empty state so we can skip drawing.
+function getOverlayQuestion() {
+  const el = document.getElementById("questionText");
+  const raw = (el?.textContent || "").trim();
+  if (!raw || raw === "Question will appear here.") return "";
+  return raw;
+}
+
+// Wrap `text` into up to `maxLines` lines that each fit within `maxWidth`
+// under the current ctx font. If the text overflows, the last line is
+// truncated with an ellipsis. Returns an array of lines.
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const trial = current ? current + " " + word : word;
+    if (ctx.measureText(trial).width <= maxWidth) {
+      current = trial;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+      if (lines.length === maxLines - 1) break;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+
+  const consumedWords = lines.reduce((n, l) => n + l.split(/\s+/).length, 0);
+  if (consumedWords < words.length) {
+    let last = lines[lines.length - 1] || "";
+    const ell = "…";
+    while (last && ctx.measureText(last + ell).width > maxWidth) {
+      last = last.slice(0, -1);
+    }
+    lines[lines.length - 1] = last + ell;
+  }
+  return lines;
+}
+
+// Draw the question pill on top of the mirrored camera frame.
+// Styled to match the on-screen .questionInner: translucent dark pill,
+// white 800-weight text, centered, rounded corners.
+function drawQuestionOverlay(ctx, w, h) {
+  const text = getOverlayQuestion();
+  if (!text) return;
+
+  const fontSize = Math.max(18, Math.round(h * 0.038));
+  const fontStack = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  ctx.font = `800 ${fontSize}px ${fontStack}`;
+  ctx.textBaseline = "top";
+  ctx.textAlign = "center";
+
+  const padX = Math.round(fontSize * 0.9);
+  const padY = Math.round(fontSize * 0.55);
+  const lineHeight = Math.round(fontSize * 1.25);
+  const maxPillWidth = Math.min(w * 0.9, Math.round(w * 0.75) + padX * 2);
+  const maxTextWidth = maxPillWidth - padX * 2;
+
+  const lines = wrapCanvasText(ctx, text, maxTextWidth, 3);
+  if (!lines.length) return;
+
+  let textWidth = 0;
+  for (const line of lines) {
+    textWidth = Math.max(textWidth, ctx.measureText(line).width);
+  }
+  const pillWidth = Math.min(maxPillWidth, Math.ceil(textWidth) + padX * 2);
+  const pillHeight = padY * 2 + lineHeight * lines.length;
+  const pillX = Math.round((w - pillWidth) / 2);
+  const pillY = Math.round(h * 0.05);
+  const radius = Math.round(fontSize * 0.55);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = Math.max(1, Math.round(fontSize * 0.06));
+  ctx.beginPath();
+  const r = Math.min(radius, pillHeight / 2, pillWidth / 2);
+  ctx.moveTo(pillX + r, pillY);
+  ctx.lineTo(pillX + pillWidth - r, pillY);
+  ctx.quadraticCurveTo(pillX + pillWidth, pillY, pillX + pillWidth, pillY + r);
+  ctx.lineTo(pillX + pillWidth, pillY + pillHeight - r);
+  ctx.quadraticCurveTo(pillX + pillWidth, pillY + pillHeight, pillX + pillWidth - r, pillY + pillHeight);
+  ctx.lineTo(pillX + r, pillY + pillHeight);
+  ctx.quadraticCurveTo(pillX, pillY + pillHeight, pillX, pillY + pillHeight - r);
+  ctx.lineTo(pillX, pillY + r);
+  ctx.quadraticCurveTo(pillX, pillY, pillX + r, pillY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#fff";
+  const centerX = pillX + pillWidth / 2;
+  let y = pillY + padY;
+  for (const line of lines) {
+    ctx.fillText(line, centerX, y);
+    y += lineHeight;
+  }
+  ctx.restore();
+}
+
 // Build a MediaStream whose video track is the camera flipped horizontally,
 // so the recorded pixels match the mirrored preview the user records against.
 // Returns { stream, cleanup } — cleanup must run when recording stops.
@@ -2694,13 +2795,15 @@ function buildMirroredRecordStream(sourceStream) {
   canvas.height = h;
   const ctx = canvas.getContext("2d");
 
-  ctx.translate(w, 0);
-  ctx.scale(-1, 1);
-
   let rafId = null;
   const drawFrame = () => {
     if (cameraBg.readyState >= 2) {
+      ctx.save();
+      ctx.translate(w, 0);
+      ctx.scale(-1, 1);
       ctx.drawImage(cameraBg, 0, 0, w, h);
+      ctx.restore();
+      drawQuestionOverlay(ctx, w, h);
     }
     rafId = requestAnimationFrame(drawFrame);
   };
