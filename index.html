@@ -1768,7 +1768,7 @@ function renderAuthUI(user) {
     if (!userCanSave(user)) throw new Error("EMAIL_NOT_VERIFIED");
 
     const now = Date.now();
-    const expiresAt = Timestamp.fromDate(new Date(now + 7 * 24 * 60 * 60 * 1000));
+    const expiresAt = Timestamp.fromDate(new Date(now + 30 * 24 * 60 * 60 * 1000));
 
     const title = meta.title || `Video - ${new Date(now).toLocaleString()}`;
     const fileName = `${now}_${meta.qKey || "q"}_.webm`;

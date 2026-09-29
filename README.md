@@ -14,8 +14,9 @@ Stays on the **free Spark plan** — no Cloud Functions, no scheduled jobs.
 
 - **Per-video size cap:** 30 MB. Enforced client-side before upload, and server-side via `storage.rules`.
 - **Per-user video cap:** 10 active videos. Enforced client-side via a live count maintained by the Firestore snapshot listener.
-- **Expiration:** 7 days from upload. The `expiresAt` field is written on save and rendered as a color-coded "Expires in N days" badge (green > 3d, amber 1–3d, red same-day).
-- **Cleanup:** when any signed-in user opens the page, the Firestore listener splits the snapshot into live and expired docs; expired docs are deleted from both Firestore and Storage. Tolerates `storage/object-not-found` so a missing blob doesn't strand the doc.
+- **Expiration:** 30 days from upload. The `expiresAt` field is written on save and rendered as a color-coded "Expires in N days" badge (green > 3d, amber 1–3d, red same-day).
+- **Video access:** Storage reads are limited to the account that owns each video. Firebase project administrators can manage files in the Firebase console.
+- **Cleanup:** when a video's owner opens the page, the Firestore listener splits their saved videos into live and expired docs; expired docs are deleted from both Firestore and Storage. Tolerates `storage/object-not-found` so a missing blob doesn't strand the doc.
 - **Limitation:** if a user abandons their account without returning, their expired Storage blobs remain in Firebase Storage indefinitely. Trade-off accepted to stay on Spark — the alternative (Firestore TTL + a Cloud Function) requires the Blaze plan.
 
 ## Deploying
