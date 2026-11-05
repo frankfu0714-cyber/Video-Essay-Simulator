@@ -28,7 +28,7 @@ Uses no scheduled jobs, so cleanup happens when a user returns.
 - **Quota data:** `aiQuota/{uid}` and `aiQuotaGlobal/{day}` in Firestore. Clients can't touch them because the rules deny all unlisted paths.
 - **Privacy:** the recording is uploaded to Gemini for the review and deleted from Gemini afterwards. Use a billing-enabled Gemini key, because free-tier content can be used to improve Google's products.
 - **Saved reviews:** users can save up to 50 reviews in `users/{uid}/aiFeedback`, readable only by that user (`firestore.rules`). Each includes the transcript. They stay until the user deletes them.
-- **Usage count:** the home page shows `aiReviews` from `stats/public`, added by the function after each successful review.
+- **Usage count:** the home page shows `aiReviews` from `stats/public`, added by the function after each successful review. It stays hidden until it reaches 10.
 - **Model:** `gemini-3.8-flash` (`functions/gemini.js`).
 
 ## Deploying

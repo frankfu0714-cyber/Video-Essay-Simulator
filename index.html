@@ -696,48 +696,33 @@ body.lock-scroll {
 .homeTopRow{
   width: min(960px, 100%);
   display: grid;
-  grid-template-columns: 1fr auto 1fr; /* 左空、 中置中、右置右 */
-  align-items: start;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 10px;
   margin-top: 16px;
 }
 
 /* 置中個人連結 */
 .homeTopRow #personalLinks{
-  grid-column: 2;
-  justify-self: center;
   margin-top: 0; /* 你剛剛調好的高度就別用負數 */
 }
 
 /* 右側 stats 對齊右邊緣 */
-.homeTopRow .homeTopStats{
-  grid-column: 3;
-  justify-self: end;
-  align-self: start;
-}
 
 /* stats 上緣齊平 */
 #statsBadge{
   margin-top: 0;
+  white-space: nowrap;
 }
 
-/* ✅ 手機：改成上下堆疊（先 personal，再 stats） */
-@media (max-width: 720px){
-  .homeTopRow{
-    grid-template-columns: 1fr;
-    gap: 10px;
-    justify-items: center;
-  }
-  .homeTopRow .homeTopStats{
-    justify-self: center;
-    grid-column: 1 / -1;
-    position: static;
-  }
-  .homeTopRow #personalLinks{
-    grid-column: 1 / -1;
-    justify-self: center;
-  }
+@media (max-width: 420px){
   #statsBadge{
-    white-space: nowrap;
+    font-size: 11px !important;
+  }
+}
+@media (max-width: 340px){
+  #statsBadge{
+    font-size: 10px !important;
   }
 }
 
@@ -1103,7 +1088,7 @@ body.lock-scroll {
   <!-- ✅ Stats (致右、在卡片外、同上緣) -->
   <div class="homeTopStats">
     <div id="statsBadge" class="pill">
-      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span> ｜ AI reviews: <span id="aiReviewCount">--</span>
+      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span><span id="aiReviewStat" hidden> ｜ AI reviews: <span id="aiReviewCount">--</span></span>
     </div>
   </div>
 </div>
@@ -1428,6 +1413,8 @@ import {
    ========================= */
 const statsRef = doc(db, "stats", "public");
 
+const AI_REVIEWS_TO_SHOW = 10;
+
 function listenStats() {
   const vEl = document.getElementById("viewCount");
   const rEl = document.getElementById("recordCount");
@@ -1437,8 +1424,9 @@ function listenStats() {
     const d = snap.data() || {};
     vEl.textContent = d.views ?? 0;
     rEl.textContent = d.recordings ?? 0;
-    const aiEl = document.getElementById("aiReviewCount");
-    if (aiEl) aiEl.textContent = d.aiReviews ?? 0;
+    const aiReviews = d.aiReviews ?? 0;
+    document.getElementById("aiReviewCount").textContent = aiReviews;
+    document.getElementById("aiReviewStat").hidden = aiReviews < AI_REVIEWS_TO_SHOW;
   });
 }
 
