@@ -729,6 +729,15 @@ body.lock-scroll {
   }
   .homeTopRow .homeTopStats{
     justify-self: center;
+    grid-column: 1 / -1;
+    position: static;
+  }
+  .homeTopRow #personalLinks{
+    grid-column: 1 / -1;
+    justify-self: center;
+  }
+  #statsBadge{
+    white-space: nowrap;
   }
 }
 
@@ -1094,7 +1103,7 @@ body.lock-scroll {
   <!-- ✅ Stats (致右、在卡片外、同上緣) -->
   <div class="homeTopStats">
     <div id="statsBadge" class="pill">
-      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span>
+      Views: <span id="viewCount">--</span> ｜ Records: <span id="recordCount">--</span> ｜ AI reviews: <span id="aiReviewCount">--</span>
     </div>
   </div>
 </div>
@@ -1109,7 +1118,7 @@ body.lock-scroll {
 
   <div class="ai-announce">
     <strong>✨ New: AI Feedback is available now</strong>
-    After recording, get scores, your transcript, and a suggested version of your answer. 3 free reviews a day with Google sign-in.
+    After recording, get scores, your transcript, and a suggested version of your answer. 5 free reviews a day with Google sign-in.
   </div>
 
 
@@ -1428,6 +1437,8 @@ function listenStats() {
     const d = snap.data() || {};
     vEl.textContent = d.views ?? 0;
     rEl.textContent = d.recordings ?? 0;
+    const aiEl = document.getElementById("aiReviewCount");
+    if (aiEl) aiEl.textContent = d.aiReviews ?? 0;
   });
 }
 
@@ -3555,6 +3566,7 @@ showHome();
 (() => {
   const AI_ENDPOINT = "https://us-central1-video-essay-simulator.cloudfunctions.net/aiFeedback";
   const AI_TIMEOUT_MS = 170000;
+  const DAILY_REVIEWS = 5;
   const MAX_BYTES = 30 * 1024 * 1024;
 
   const MAX_SAVED = 50;
@@ -3602,7 +3614,7 @@ showHome();
   function showSignIn() {
     const error = el("p", { className: "ai-error" });
     show(
-      el("p", { textContent: "Get coaching on your answer's content, structure, delivery, and presence. Sign in with Google for 3 free reviews a day." }),
+      el("p", { textContent: `Get coaching on your answer's content, structure, delivery, and presence. Sign in with Google for ${DAILY_REVIEWS} free reviews a day.` }),
       el("div", { className: "ai-actions" },
         button("Continue with Google", "btn-primary", async () => {
           error.textContent = "";
@@ -3657,10 +3669,10 @@ showHome();
       const quota = await aiRequest();
       if (id !== renderId) return;
       if (quota.remaining > 0) {
-        remaining.textContent = `${quota.remaining} of 3 free reviews left today.`;
+        remaining.textContent = `${quota.remaining} of ${DAILY_REVIEWS} free reviews left today.`;
         start.disabled = false;
       } else {
-        remaining.textContent = `You've used all 3 free reviews today. More at ${resetTime(quota.resetsAt)}.`;
+        remaining.textContent = `You've used all ${DAILY_REVIEWS} free reviews today. More at ${resetTime(quota.resetsAt)}.`;
       }
     } catch (e) {
       if (id !== renderId) return;
@@ -3745,7 +3757,7 @@ showHome();
     const left = savedAt
       ? `Saved ${savedAt.toLocaleString()}.`
       : remaining > 0
-        ? `${remaining} of 3 free reviews left today.`
+        ? `${remaining} of ${DAILY_REVIEWS} free reviews left today.`
         : `That was your last free review today. More at ${resetTime(resetsAt)}.`;
 
     if (f.answerDetected === false) {
