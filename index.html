@@ -534,6 +534,54 @@ body.lock-scroll {
   position: fixed;
   width: 100%;
 }
+/* ===== AI Feedback ===== */
+.btn-ai { background:#fff; color:#2d1b69; }
+#aiPanel {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,0.6);
+}
+#aiPanel.open { display: flex; }
+.ai-card {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  color: #1f1b2e;
+  line-height: 1.5;
+}
+.ai-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.ai-head h2 { margin:0; font-size:1.2rem; color:#2d1b69; }
+.ai-close { background:#eee; color:#111; }
+.ai-note { margin:10px 0 0; font-size:0.9rem; color:#5b5670; }
+.ai-note a { color:#2d1b69; }
+.ai-question { padding:10px 12px; border-radius:10px; background:#f4f0ff; font-weight:700; }
+.ai-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.ai-error { color:#b91c1c; font-weight:700; }
+.ai-overall { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+.ai-score { flex:none; font-size:1.9rem; font-weight:900; color:#2d1b69; }
+.ai-score small { font-size:0.95rem; color:#5b5670; }
+.ai-row { padding:10px 0; border-top:1px solid #ece8f5; }
+.ai-row-head { display:flex; justify-content:space-between; gap:12px; font-weight:800; }
+.ai-row p { margin:4px 0 0; }
+.ai-card h3 { margin:14px 0 4px; font-size:1rem; color:#2d1b69; }
+.ai-card ul { margin:0; padding-left:20px; }
+.ai-spinner {
+  width:28px; height:28px; margin:18px auto;
+  border:3px solid #ece8f5; border-top-color:#2d1b69; border-radius:50%;
+  animation: ai-spin 0.9s linear infinite;
+}
+@keyframes ai-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ai-spinner { animation-duration: 3s; } }
+
 /* ===== Maintenance Overlay ===== */
 #maintenanceOverlay {
   position: fixed;
@@ -1245,6 +1293,16 @@ body.lock-scroll {
   </div>
 
   <!-- Playback overlay -->
+  <div id="aiPanel" role="dialog" aria-modal="true" aria-labelledby="aiPanelTitle">
+    <div class="ai-card">
+      <div class="ai-head">
+        <h2 id="aiPanelTitle">AI Feedback</h2>
+        <button class="btn ai-close" id="aiPanelClose">Close</button>
+      </div>
+      <div id="aiPanelBody"></div>
+    </div>
+  </div>
+
   <div id="playbackScreen">
     <div class="playbackCard">
       <div class="row" style="justify-content:space-between; margin-bottom:10px;">
@@ -1255,6 +1313,7 @@ body.lock-scroll {
 
   <div class="row">
 
+          <button class="btn btn-ai" id="aiFeedbackBtn">✨ AI Feedback</button>
           <button class="btn btn-ghost" id="retakeBtn">Retake</button>
           <button class="btn btn-primary" id="nextBtn">Next Question</button>
           <button class="btn btn-ghost" id="homeBtn">Home</button>
@@ -1463,7 +1522,7 @@ window.bumpRecording = bumpRecording;
   modal.innerHTML = `
     <div style="width:min(520px,100%); background:#fff; border-radius:16px; padding:16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-        <div style="font-weight:900; font-size:1.1rem;">Sign in to save videos</div>
+        <div style="font-weight:900; font-size:1.1rem;">Sign in</div>
         <button id="authModalClose" class="btn btn-ghost" style="background:#eee; color:#111;">Close</button>
       </div>
 
@@ -1829,6 +1888,10 @@ function renderAuthUI(user) {
 
   // expose
   window.getAuthUser = () => auth.currentUser;
+  window.hasGoogleSignIn = () =>
+    !!auth.currentUser?.providerData?.some(p => p.providerId === "google.com");
+  window.signInWithGoogle = () => signInWithPopup(auth, new GoogleAuthProvider());
+  window.getIdToken = () => auth.currentUser?.getIdToken();
   window.openAuthModal = (msg="") => openAuthModal(msg);
   window.saveVideoBlob = (blob, meta={}) => saveVideoBlob(blob, meta);
   window.userCanSave = () => userCanSave(auth.currentUser);
@@ -3434,6 +3497,202 @@ pbTrack.addEventListener("pointercancel", () => { pbSeeking = false; });
 // 初始
 showHome();
   
+/* ===== AI Feedback ===== */
+(() => {
+  const AI_ENDPOINT = "https://us-central1-video-essay-simulator.cloudfunctions.net/aiFeedback";
+  const AI_TIMEOUT_MS = 170000;
+  const MAX_BYTES = 30 * 1024 * 1024;
+
+  const panel = document.getElementById("aiPanel");
+  const body = document.getElementById("aiPanelBody");
+  // Keeps a finished review attached to its recording, so reopening doesn't spend a try.
+  const reviews = new WeakMap();
+  let reviewing = false;
+  let renderId = 0;
+
+  // Model and user text is only ever inserted as textContent.
+  function el(tag, props = {}, ...children) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...children.filter(c => c != null));
+    return node;
+  }
+
+  function button(label, cls, onClick) {
+    return el("button", { className: `btn ${cls}`, textContent: label, onclick: onClick });
+  }
+
+  function show(...nodes) {
+    renderId++;
+    body.replaceChildren(...nodes);
+  }
+
+  function resetTime(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+
+  async function aiRequest(options = {}) {
+    const res = await fetch(AI_ENDPOINT, {
+      ...options,
+      headers: { Authorization: `Bearer ${await window.getIdToken()}`, ...options.headers },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.message || "Request failed."), data);
+    return data;
+  }
+
+  function showSignIn() {
+    const error = el("p", { className: "ai-error" });
+    show(
+      el("p", { textContent: "Get coaching on your answer's content, structure, delivery, and presence. Sign in with Google for 3 free reviews a day." }),
+      el("div", { className: "ai-actions" },
+        button("Continue with Google", "btn-primary", async () => {
+          error.textContent = "";
+          try {
+            await window.signInWithGoogle();
+            showStart();
+          } catch (e) {
+            console.error(e);
+            error.textContent = "Google sign-in didn't finish. Please try again.";
+          }
+        })
+      ),
+      error
+    );
+  }
+
+  function showError(message, canRetry = true) {
+    show(
+      el("p", { className: "ai-error", textContent: message }),
+      canRetry
+        ? el("div", { className: "ai-actions" }, button("Try again", "btn-primary", showStart))
+        : null
+    );
+  }
+
+  async function showStart() {
+    if (!lastRecordedBlob?.size) return showError("Record an answer first.", false);
+    if (lastRecordedBlob.size > MAX_BYTES) {
+      return showError("This recording is over the 30 MB limit. Please record a shorter answer.", false);
+    }
+    if (reviews.has(lastRecordedBlob)) return showResult(reviews.get(lastRecordedBlob));
+    if (!window.hasGoogleSignIn?.()) return showSignIn();
+
+    const remaining = el("p", { className: "ai-note", textContent: "Checking your free reviews..." });
+    const start = button("Analyze my answer", "btn-primary", analyze);
+    start.disabled = true;
+    const question = getCurrentQuestion();
+
+    show(
+      el("div", { className: "ai-question", textContent: question }),
+      remaining,
+      el("p", { className: "ai-note" },
+        "Your recording is sent to Google's Gemini API to create this review, under ",
+        el("a", { href: "https://ai.google.dev/gemini-api/terms", target: "_blank", rel: "noopener", textContent: "Google's terms" }),
+        ". This app doesn't keep it unless you press Save."
+      ),
+      el("div", { className: "ai-actions" }, start)
+    );
+
+    const id = renderId;
+    try {
+      const quota = await aiRequest();
+      if (id !== renderId) return;
+      if (quota.remaining > 0) {
+        remaining.textContent = `${quota.remaining} of 3 free reviews left today.`;
+        start.disabled = false;
+      } else {
+        remaining.textContent = `You've used all 3 free reviews today. More at ${resetTime(quota.resetsAt)}.`;
+      }
+    } catch (e) {
+      if (id !== renderId) return;
+      showError(e.message || "Couldn't reach AI feedback. Please try again.");
+    }
+  }
+
+  async function analyze() {
+    const blob = lastRecordedBlob;
+    reviewing = true;
+    show(
+      el("div", { className: "ai-spinner", role: "status", ariaLabel: "Analyzing" }),
+      el("p", { className: "ai-note", style: "text-align:center", textContent: "Watching your answer. This usually takes under a minute." })
+    );
+
+    try {
+      const data = await aiRequest({
+        method: "POST",
+        signal: AbortSignal.timeout(AI_TIMEOUT_MS),
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "X-Video-Type": blob.type || "video/webm",
+          "X-Question": encodeURIComponent(getCurrentQuestion()),
+        },
+        body: blob,
+      });
+      reviews.set(blob, data);
+      if (panel.classList.contains("open") && blob === lastRecordedBlob) showResult(data);
+    } catch (e) {
+      console.error(e);
+      const timedOut = e?.name === "TimeoutError";
+      showError(timedOut ? "That took too long. Please try again." : (e.message || "The review failed. Please try again."));
+    } finally {
+      reviewing = false;
+    }
+  }
+
+  function scoreRow(label, part) {
+    const score = Number.isInteger(part?.score) ? `${part.score}/10` : "Not assessed";
+    return el("div", { className: "ai-row" },
+      el("div", { className: "ai-row-head" },
+        el("span", { textContent: label }),
+        el("span", { textContent: score })
+      ),
+      el("p", { textContent: part?.feedback || "" })
+    );
+  }
+
+  function list(title, items) {
+    return [
+      el("h3", { textContent: title }),
+      el("ul", {}, ...(items || []).map(text => el("li", { textContent: text }))),
+    ];
+  }
+
+  function showResult({ feedback: f, remaining, resetsAt }) {
+    const left = remaining > 0
+      ? `${remaining} of 3 free reviews left today.`
+      : `That was your last free review today. More at ${resetTime(resetsAt)}.`;
+
+    if (f.answerDetected === false) {
+      show(el("p", { textContent: f.summary }), el("p", { className: "ai-note", textContent: left }));
+      return;
+    }
+
+    show(
+      el("div", { className: "ai-overall" },
+        el("div", { className: "ai-score" }, String(f.overallScore), el("small", { textContent: "/10" })),
+        el("div", { textContent: f.summary })
+      ),
+      scoreRow("Content", f.content),
+      scoreRow("Structure", f.structure),
+      scoreRow("Delivery", f.delivery),
+      scoreRow("Presence", f.presence),
+      ...list("What worked", f.strengths),
+      ...list("Try on your next take", f.improvements),
+      el("h3", { textContent: "A stronger opening" }),
+      el("p", { textContent: f.strongerOpening }),
+      el("p", { className: "ai-note", textContent: `AI feedback can be wrong, so use your judgment. ${left}` })
+    );
+  }
+
+  document.getElementById("aiFeedbackBtn").addEventListener("click", () => {
+    panel.classList.add("open");
+    if (!reviewing) showStart();
+  });
+  document.getElementById("aiPanelClose").addEventListener("click", () => {
+    panel.classList.remove("open");
+  });
+})();
+
 /* ===== Maintenance Mode Logic ===== */
 if (!MAINTENANCE_MODE) {
   const overlay = document.getElementById("maintenanceOverlay");
