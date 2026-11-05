@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { onRequest } from "firebase-functions/v2/https";
 import { createHandler } from "./feedback.js";
@@ -26,5 +26,7 @@ export const aiFeedback = onRequest(
       verifyToken: (idToken) => getAuth().verifyIdToken(idToken),
       db: getFirestore(),
       analyze: createAnalyzer(GEMINI_API_KEY.value()),
+      countReview: () =>
+        getFirestore().doc("stats/public").set({ aiReviews: FieldValue.increment(1) }, { merge: true }),
     })(req, res)
 );
