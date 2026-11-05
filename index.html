@@ -561,6 +561,19 @@ body.lock-scroll {
 .ai-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
 .ai-head h2 { margin:0; font-size:1.2rem; color:#2d1b69; }
 .ai-close { background:#eee; color:#111; }
+.ai-announce {
+  width: min(960px, 100%);
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: #2d1b69;
+  line-height: 1.45;
+}
+.ai-announce strong { display:block; font-size:1.05rem; }
+.ai-transcript { margin-top:14px; padding:10px 12px; border-radius:10px; background:#f4f0ff; }
+.ai-transcript summary { font-weight:800; color:#2d1b69; cursor:pointer; }
+.ai-transcript p { margin:8px 0 0; white-space:pre-wrap; }
+.ai-suggested { margin:0; white-space:pre-wrap; }
 .ai-note { margin:10px 0 0; font-size:0.9rem; color:#5b5670; }
 .ai-note a { color:#2d1b69; }
 .ai-question { padding:10px 12px; border-radius:10px; background:#f4f0ff; font-weight:700; }
@@ -1094,6 +1107,11 @@ body.lock-scroll {
 
 </div>
 
+  <div class="ai-announce">
+    <strong>✨ New: AI Feedback is available now</strong>
+    After recording, get scores, your transcript, and a suggested version of your answer. 3 free reviews a day with Google sign-in.
+  </div>
+
 
   <div class="card">
     <div class="grid">
@@ -1180,6 +1198,14 @@ body.lock-scroll {
     <div class="muted" id="myVideosHint">Sign in to see saved videos.</div>
   </div>
   <div id="myVideosList"></div>
+</div>
+
+<div class="card" id="aiSavedCard" style="margin-top:16px; display:none;">
+  <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+    <h2 style="margin:0;">My AI Feedback</h2>
+    <div class="muted" id="aiSavedHint"></div>
+  </div>
+  <div id="aiSavedList"></div>
 </div>
 
 <!-- ✅ 第三大欄：Comments（只放留言，不放 My Videos） -->
@@ -1720,6 +1746,33 @@ function renderAuthUI(user) {
 
   let unsubscribeMyVideos = null;
 
+  let unsubscribeSavedFeedback = null;
+
+  function aiFeedbackCol(uid) {
+    return collection(db, "users", uid, "aiFeedback");
+  }
+
+  function startSavedFeedbackListener(user) {
+    if (unsubscribeSavedFeedback) unsubscribeSavedFeedback();
+    unsubscribeSavedFeedback = null;
+    window.renderSavedFeedback?.(null);
+    if (!user) return;
+
+    const q = query(aiFeedbackCol(user.uid), orderBy("createdAt", "desc"), limit(window.MAX_SAVED_FEEDBACK));
+    unsubscribeSavedFeedback = onSnapshot(q, (snap) => {
+      window.renderSavedFeedback?.(snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        savedAt: d.data().createdAt?.toDate?.() ?? new Date(),
+      })));
+    }, (e) => console.error("saved feedback listener failed", e));
+  }
+
+  window.saveAiFeedback = ({ question, feedback }) =>
+    addDoc(aiFeedbackCol(auth.currentUser.uid), { question, feedback, createdAt: serverTimestamp() });
+  window.deleteAiFeedback = (id) =>
+    deleteDoc(doc(db, "users", auth.currentUser.uid, "aiFeedback", id));
+
   function startMyVideosListener(user) {
     if (unsubscribeMyVideos) unsubscribeMyVideos();
     unsubscribeMyVideos = null;
@@ -1936,6 +1989,7 @@ if (authHomeAreaEl) {
  onAuthStateChanged(auth, (user) => {
   renderAuthUI(user);
   startMyVideosListener(user);
+  startSavedFeedbackListener(user);
    
 });
   listenStats();
@@ -3503,12 +3557,17 @@ showHome();
   const AI_TIMEOUT_MS = 170000;
   const MAX_BYTES = 30 * 1024 * 1024;
 
+  const MAX_SAVED = 50;
+  window.MAX_SAVED_FEEDBACK = MAX_SAVED;
+
   const panel = document.getElementById("aiPanel");
+  document.body.appendChild(panel); // Saved reviews open from the home screen too.
   const body = document.getElementById("aiPanelBody");
   // Keeps a finished review attached to its recording, so reopening doesn't spend a try.
   const reviews = new WeakMap();
   let reviewing = false;
   let renderId = 0;
+  let savedCount = 0;
 
   // Model and user text is only ever inserted as textContent.
   function el(tag, props = {}, ...children) {
@@ -3523,7 +3582,7 @@ showHome();
 
   function show(...nodes) {
     renderId++;
-    body.replaceChildren(...nodes);
+    body.replaceChildren(...nodes.filter(Boolean));
   }
 
   function resetTime(iso) {
@@ -3611,6 +3670,7 @@ showHome();
 
   async function analyze() {
     const blob = lastRecordedBlob;
+    const question = getCurrentQuestion();
     reviewing = true;
     show(
       el("div", { className: "ai-spinner", role: "status", ariaLabel: "Analyzing" }),
@@ -3624,10 +3684,11 @@ showHome();
         headers: {
           "Content-Type": "application/octet-stream",
           "X-Video-Type": blob.type || "video/webm",
-          "X-Question": encodeURIComponent(getCurrentQuestion()),
+          "X-Question": encodeURIComponent(question),
         },
         body: blob,
       });
+      data.question = question;
       reviews.set(blob, data);
       if (panel.classList.contains("open") && blob === lastRecordedBlob) showResult(data);
     } catch (e) {
@@ -3657,10 +3718,35 @@ showHome();
     ];
   }
 
-  function showResult({ feedback: f, remaining, resetsAt }) {
-    const left = remaining > 0
-      ? `${remaining} of 3 free reviews left today.`
-      : `That was your last free review today. More at ${resetTime(resetsAt)}.`;
+  function saveButton(data) {
+    const save = button(data.saved ? "Saved ✅" : "Save feedback", "btn-primary", async () => {
+      if (savedCount >= MAX_SAVED) {
+        save.textContent = `Limit of ${MAX_SAVED} reached. Delete one first.`;
+        return;
+      }
+      save.disabled = true;
+      save.textContent = "Saving...";
+      try {
+        await window.saveAiFeedback({ question: data.question, feedback: data.feedback });
+        data.saved = true;
+        save.textContent = "Saved ✅";
+      } catch (e) {
+        console.error(e);
+        save.disabled = false;
+        save.textContent = "Couldn't save. Try again";
+      }
+    });
+    save.disabled = !!data.saved;
+    return el("div", { className: "ai-actions" }, save);
+  }
+
+  function showResult(data) {
+    const { feedback: f, remaining, resetsAt, savedAt } = data;
+    const left = savedAt
+      ? `Saved ${savedAt.toLocaleString()}.`
+      : remaining > 0
+        ? `${remaining} of 3 free reviews left today.`
+        : `That was your last free review today. More at ${resetTime(resetsAt)}.`;
 
     if (f.answerDetected === false) {
       show(el("p", { textContent: f.summary }), el("p", { className: "ai-note", textContent: left }));
@@ -3668,6 +3754,7 @@ showHome();
     }
 
     show(
+      savedAt ? el("div", { className: "ai-question", textContent: data.question }) : null,
       el("div", { className: "ai-overall" },
         el("div", { className: "ai-score" }, String(f.overallScore), el("small", { textContent: "/10" })),
         el("div", { textContent: f.summary })
@@ -3676,13 +3763,61 @@ showHome();
       scoreRow("Structure", f.structure),
       scoreRow("Delivery", f.delivery),
       scoreRow("Presence", f.presence),
+      f.transcript
+        ? el("details", { className: "ai-transcript" },
+            el("summary", { textContent: "What you said" }),
+            el("p", { textContent: f.transcript })
+          )
+        : null,
       ...list("What worked", f.strengths),
       ...list("Try on your next take", f.improvements),
       el("h3", { textContent: "A stronger opening" }),
       el("p", { textContent: f.strongerOpening }),
-      el("p", { className: "ai-note", textContent: `AI feedback can be wrong, so use your judgment. ${left}` })
+      f.suggestedAnswer ? el("h3", { textContent: "Suggested version" }) : null,
+      f.suggestedAnswer ? el("p", { className: "ai-suggested", textContent: f.suggestedAnswer }) : null,
+      el("p", { className: "ai-note", textContent: `AI feedback can be wrong, so use your judgment. ${left}` }),
+      savedAt ? null : saveButton(data)
     );
   }
+
+  const savedCard = document.getElementById("aiSavedCard");
+  const savedHint = document.getElementById("aiSavedHint");
+  const savedList = document.getElementById("aiSavedList");
+
+  function savedRow(item) {
+    return el("div", { className: "commentItem" },
+      el("div", { className: "commentMeta" },
+        el("div", { textContent: `${item.feedback.overallScore}/10 · ${item.question}` }),
+        el("div", { className: "commentTime", textContent: item.savedAt.toLocaleString() })
+      ),
+      el("div", { className: "row", style: "margin-top:10px;" },
+        button("View", "btn-primary", () => {
+          panel.classList.add("open");
+          showResult(item);
+        }),
+        button("Delete", "btn-danger", async () => {
+          if (!confirm("Delete this saved feedback?")) return;
+          try {
+            await window.deleteAiFeedback(item.id);
+          } catch (e) {
+            console.error(e);
+            alert("Delete failed. Please try again.");
+          }
+        })
+      )
+    );
+  }
+
+  window.renderSavedFeedback = (items) => {
+    savedCount = items?.length ?? 0;
+    savedCard.style.display = items ? "block" : "none";
+    savedHint.textContent = `${savedCount} / ${MAX_SAVED} saved`;
+    savedList.replaceChildren(
+      ...(items?.length
+        ? items.map(savedRow)
+        : [el("div", { className: "muted", textContent: "No saved feedback yet." })])
+    );
+  };
 
   document.getElementById("aiFeedbackBtn").addEventListener("click", () => {
     panel.classList.add("open");
