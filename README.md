@@ -6,6 +6,7 @@ Live: https://frankfu0714-cyber.github.io/Video-Essay-Simulator/
 
 - `index.html` — the entire app (static, deployed to GitHub Pages). Uses Firebase Auth, Firestore, and Storage.
 - `functions/` — Cloud Function for AI feedback. Holds the Gemini key and enforces the daily limit.
+- `firestore.rules` — Firestore security rules. Deploy with `firebase deploy --only firestore:rules`.
 - `storage.rules` — Firebase Storage security rules (per-user write, 30 MB cap, video MIME only).
 - `firebase.json`, `.firebaserc` — Firebase CLI config (project ID: `video-essay-simulator`).
 
@@ -26,6 +27,7 @@ Uses no scheduled jobs, so cleanup happens when a user returns.
 - **Limits:** 3 reviews per user per UTC day, and 200 across all users as a spending cap (`functions/feedback.js`). Failed reviews are refunded.
 - **Quota data:** `aiQuota/{uid}` and `aiQuotaGlobal/{day}` in Firestore. Clients can't touch them because the rules deny all unlisted paths.
 - **Privacy:** the recording is uploaded to Gemini for the review and deleted from Gemini afterwards. Use a billing-enabled Gemini key, because free-tier content can be used to improve Google's products.
+- **Saved reviews:** users can save up to 50 reviews in `users/{uid}/aiFeedback`, readable only by that user (`firestore.rules`). Each includes the transcript. They stay until the user deletes them.
 - **Model:** `gemini-3.8-flash` (`functions/gemini.js`).
 
 ## Deploying

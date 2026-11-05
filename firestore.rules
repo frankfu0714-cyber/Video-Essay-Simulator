@@ -1,0 +1,32 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ✅ stats/public：允許任何人讀＆寫（只限這一份文件）
+    match /stats/public {
+      allow read, write: if true;
+    }
+
+    // ✅ 公開留言 comments：任何人可讀、可新增（不可改/刪）
+    match /comments/{docId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // ✅ 使用者自己的 videos：只能本人讀寫
+    match /users/{uid}/videos/{videoId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ✅ 使用者自己的 AI feedback：只能本人讀、存、刪
+    match /users/{uid}/aiFeedback/{feedbackId} {
+      allow read, create, delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ❌ 其他所有資料：全部拒絕（安全）
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
