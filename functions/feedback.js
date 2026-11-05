@@ -1,7 +1,7 @@
 // Request handling for AI feedback. Dependencies are passed in so the quota,
 // auth, and refund rules can be tested without calling Google.
 
-export const DAILY_LIMIT = 3;
+export const DAILY_LIMIT = 5;
 export const GLOBAL_DAILY_LIMIT = 200; // Spending circuit breaker across all users.
 export const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // Same cap as saved videos.
 const MAX_QUESTION_CHARS = 1000;
@@ -82,7 +82,7 @@ export async function reserveQuota(db, uid, now = new Date()) {
     const globalUsed = globalSnap.exists ? globalSnap.data().used : 0;
 
     if (used >= DAILY_LIMIT) {
-      throw new HttpError(429, "daily_limit", "You've used all 3 free analyses for today.", {
+      throw new HttpError(429, "daily_limit", `You've used all ${DAILY_LIMIT} free analyses for today.`, {
         remaining: 0,
         resetsAt: nextResetIso(now),
       });
@@ -97,7 +97,7 @@ export async function reserveQuota(db, uid, now = new Date()) {
   });
 }
 
-// A failed analysis should not cost the user one of their three tries.
+// A failed analysis should not cost the user one of their daily tries.
 export async function refundQuota(db, uid, day) {
   const userRef = db.doc(`aiQuota/${uid}`);
   const globalRef = db.doc(`aiQuotaGlobal/${day}`);
@@ -120,7 +120,7 @@ export async function getRemaining(db, uid, now = new Date()) {
   return { remaining: Math.max(0, DAILY_LIMIT - used), resetsAt: nextResetIso(now) };
 }
 
-export function createHandler({ verifyToken, db, analyze, log = console }) {
+export function createHandler({ verifyToken, db, analyze, countReview = async () => {}, log = console }) {
   return async function handle(req, res) {
     try {
       const token = await requireGoogleUser(req, verifyToken);
@@ -136,14 +136,18 @@ export function createHandler({ verifyToken, db, analyze, log = console }) {
       const { type, video, question } = parseVideoRequest(req);
       const { day, remaining } = await reserveQuota(db, token.uid);
 
+      let feedback;
       try {
-        const feedback = await analyze({ video, type, question });
-        res.status(200).json({ feedback, remaining, resetsAt: nextResetIso() });
+        feedback = await analyze({ video, type, question });
       } catch (err) {
         await refundQuota(db, token.uid, day).catch((e) => log.error("refund failed", e));
         log.error("analysis failed", err);
         throw new HttpError(502, "analysis_failed", "The analysis failed, so this try wasn't counted. Please try again.");
       }
+
+      // The public counter must never cost a user their finished review.
+      await countReview().catch((e) => log.error("review count failed", e));
+      res.status(200).json({ feedback, remaining, resetsAt: nextResetIso() });
     } catch (err) {
       if (err instanceof HttpError) {
         res.status(err.status).json({ error: err.code, message: err.message, ...err.extra });

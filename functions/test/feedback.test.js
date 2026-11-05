@@ -43,11 +43,12 @@ function response() {
   };
 }
 
-function setup({ user = google, seed, analyze } = {}) {
+function setup({ user = google, seed, analyze, countReview } = {}) {
   const db = fakeDb(seed);
   const calls = [];
   const handle = createHandler({
     db,
+    countReview,
     log: { error() {} },
     verifyToken: async (t) => { if (t !== "good") throw new Error("bad"); return user; },
     analyze: analyze || (async (a) => { calls.push(a); return { overallScore: 7 }; }),
@@ -71,7 +72,7 @@ test("rejects accounts without a Google identity", async () => {
   assert.equal(calls.length, 0);
 });
 
-test("allows three analyses a day and blocks the fourth", async () => {
+test("allows the daily limit and blocks the next analysis", async () => {
   const { send, calls } = setup();
   const remaining = [];
   for (let i = 0; i < DAILY_LIMIT; i++) {
@@ -79,7 +80,7 @@ test("allows three analyses a day and blocks the fourth", async () => {
     assert.equal(res.statusCode, 200);
     remaining.push(res.body.remaining);
   }
-  assert.deepEqual(remaining, [2, 1, 0]);
+  assert.deepEqual(remaining, [4, 3, 2, 1, 0]);
   const blocked = await send();
   assert.equal(blocked.statusCode, 429);
   assert.equal(blocked.body.error, "daily_limit");
@@ -87,10 +88,10 @@ test("allows three analyses a day and blocks the fourth", async () => {
 });
 
 test("resets on a new UTC day", async () => {
-  const { send } = setup({ seed: { "aiQuota/u1": { day: "2000-01-01", used: 3 } } });
+  const { send } = setup({ seed: { "aiQuota/u1": { day: "2000-01-01", used: DAILY_LIMIT } } });
   const res = await send();
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.remaining, 2);
+  assert.equal(res.body.remaining, DAILY_LIMIT - 1);
 });
 
 test("a failed analysis refunds the user and global counters", async () => {
@@ -129,6 +130,22 @@ test("GET reports remaining uses without spending one", async () => {
   const { send, db } = setup({ seed: { "aiQuota/u1": { day: utcDay(), used: 2 } } });
   const res = await send({ method: "GET" });
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.remaining, 1);
+  assert.equal(res.body.remaining, DAILY_LIMIT - 2);
   assert.equal(db.store.get("aiQuota/u1").used, 2);
+});
+
+test("counts successful reviews only", async () => {
+  let count = 0;
+  const countReview = async () => { count++; };
+  await setup({ countReview }).send();
+  assert.equal(count, 1);
+  await setup({ countReview, analyze: async () => { throw new Error("down"); } }).send();
+  assert.equal(count, 1);
+});
+
+test("a counter failure still returns the review and keeps the charge", async () => {
+  const { send, db } = setup({ countReview: async () => { throw new Error("stats down"); } });
+  const res = await send();
+  assert.equal(res.statusCode, 200);
+  assert.equal(db.store.get("aiQuota/u1").used, 1);
 });
