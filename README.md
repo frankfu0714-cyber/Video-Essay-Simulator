@@ -29,6 +29,7 @@ Uses no scheduled jobs, so cleanup happens when a user returns.
 - **Privacy:** the recording is uploaded to Gemini for the review and deleted from Gemini afterwards. Use a billing-enabled Gemini key, because free-tier content can be used to improve Google's products.
 - **Saved reviews:** users can save up to 50 reviews in `users/{uid}/aiFeedback`, readable only by that user (`firestore.rules`). Each includes the transcript. They stay until the user deletes them.
 - **Usage count:** the home page shows `aiReviews` from `stats/public`, added by the function after each successful review. It stays hidden until it reaches 10.
+- **Funnel:** `stats/aiFunnel` counts sessions reaching each step (seen, opened, signInShown, signInClicked, signedIn, ready, analyzeClicked, reviewOk, and failures). Anonymous, once per step per session; rules only allow +1 on known steps.
 - **Model:** `gemini-3.8-flash` (`functions/gemini.js`).
 
 ## Deploying

@@ -1371,7 +1371,7 @@ body.lock-scroll {
 import {
   getFirestore, collection, addDoc, serverTimestamp,
   query, orderBy, onSnapshot, limit, doc, deleteDoc, Timestamp,
-  runTransaction, increment
+  runTransaction, increment, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 
@@ -1766,6 +1766,19 @@ function renderAuthUI(user) {
       })));
     }, (e) => console.error("saved feedback listener failed", e));
   }
+
+  // Anonymous AI Feedback funnel: counts sessions reaching each step, once per step per session.
+  const AI_FUNNEL_STEPS = ["seen", "opened", "signInShown", "signInClicked", "signedIn", "signInFailed", "ready", "limitReached", "analyzeClicked", "reviewOk", "reviewFailed"];
+  window.trackAi = (step) => {
+    if (!AI_FUNNEL_STEPS.includes(step)) return;
+    const key = `aiFunnel:${step}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {}
+    setDoc(doc(db, "stats", "aiFunnel"), { [step]: increment(1) }, { merge: true })
+      .catch((e) => console.error("trackAi failed", e));
+  };
 
   window.saveAiFeedback = ({ question, feedback }) =>
     addDoc(aiFeedbackCol(auth.currentUser.uid), { question, feedback, createdAt: serverTimestamp() });
@@ -3034,6 +3047,7 @@ function showRecordScreen() {
 }
 
 function showPlayback() {
+  window.trackAi?.("seen");
     stopSmoothRecordProgress();
   playbackScreen.style.display = "block";
   stopBtn.style.display = "none";
@@ -3600,16 +3614,20 @@ showHome();
   }
 
   function showSignIn() {
+    window.trackAi?.("signInShown");
     const error = el("p", { className: "ai-error" });
     show(
       el("p", { textContent: `Get coaching on your answer's content, structure, delivery, and presence. Sign in with Google for ${DAILY_REVIEWS} free reviews a day.` }),
       el("div", { className: "ai-actions" },
         button("Continue with Google", "btn-primary", async () => {
           error.textContent = "";
+          window.trackAi?.("signInClicked");
           try {
             await window.signInWithGoogle();
+            window.trackAi?.("signedIn");
             showStart();
           } catch (e) {
+            window.trackAi?.("signInFailed");
             console.error(e);
             error.textContent = "Google sign-in didn't finish. Please try again.";
           }
@@ -3657,9 +3675,11 @@ showHome();
       const quota = await aiRequest();
       if (id !== renderId) return;
       if (quota.remaining > 0) {
+        window.trackAi?.("ready");
         remaining.textContent = `${quota.remaining} of ${DAILY_REVIEWS} free reviews left today.`;
         start.disabled = false;
       } else {
+        window.trackAi?.("limitReached");
         remaining.textContent = `You've used all ${DAILY_REVIEWS} free reviews today. More at ${resetTime(quota.resetsAt)}.`;
       }
     } catch (e) {
@@ -3669,6 +3689,7 @@ showHome();
   }
 
   async function analyze() {
+    window.trackAi?.("analyzeClicked");
     const blob = lastRecordedBlob;
     const question = getCurrentQuestion();
     reviewing = true;
@@ -3688,10 +3709,12 @@ showHome();
         },
         body: blob,
       });
+      window.trackAi?.("reviewOk");
       data.question = question;
       reviews.set(blob, data);
       if (panel.classList.contains("open") && blob === lastRecordedBlob) showResult(data);
     } catch (e) {
+      window.trackAi?.("reviewFailed");
       console.error(e);
       const timedOut = e?.name === "TimeoutError";
       showError(timedOut ? "That took too long. Please try again." : (e.message || "The review failed. Please try again."));
@@ -3820,6 +3843,7 @@ showHome();
   };
 
   document.getElementById("aiFeedbackBtn").addEventListener("click", () => {
+    window.trackAi?.("opened");
     panel.classList.add("open");
     if (!reviewing) showStart();
   });

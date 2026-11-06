@@ -7,6 +7,35 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // ✅ AI Feedback 匿名漏斗計數：任何人可讀；只能把允許的欄位各 +1
+    match /stats/aiFunnel {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(aiFunnelSteps())
+        && request.resource.data.keys().size() == 1
+        && request.resource.data.values().hasOnly([1]);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(aiFunnelSteps())
+        && request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && stepsGrewByOne();
+      allow delete: if false;
+    }
+
+    function aiFunnelSteps() {
+      return ["seen", "opened", "signInShown", "signInClicked", "signedIn", "signInFailed",
+              "ready", "limitReached", "analyzeClicked", "reviewOk", "reviewFailed"];
+    }
+
+    function grewByOne(k) {
+      return request.resource.data.get(k, 0) == resource.data.get(k, 0)
+        || request.resource.data.get(k, 0) == resource.data.get(k, 0) + 1;
+    }
+
+    function stepsGrewByOne() {
+      return grewByOne("seen") && grewByOne("opened") && grewByOne("signInShown")
+        && grewByOne("signInClicked") && grewByOne("signedIn") && grewByOne("signInFailed")
+        && grewByOne("ready") && grewByOne("limitReached") && grewByOne("analyzeClicked")
+        && grewByOne("reviewOk") && grewByOne("reviewFailed");
+    }
+
     // ✅ 公開留言 comments：任何人可讀、可新增（不可改/刪）
     match /comments/{docId} {
       allow read: if true;
